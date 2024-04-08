@@ -1,78 +1,48 @@
-#neural network proof of concept + i can play with it
-
-#weights go to next neuron
-
 def f(x)
-    return 1 / (1 + x.abs())
+    return 1 / Math.exp(x)
 end
 
 class Neuron
-    attr_accessor :b, :a, :z, :w
+    attr_accessor :b, :a, :z
 
-    def initialize(b, w, a, z)
+    def initialize(b, a, z)
         @b = b
-        @w = w
         @a = a
         @z = z
-    end
-end
-
-class Layer
-    attr_accessor :neurons
-
-    def initialize(size, nl_size=nil)
-        if nl_size.nil?
-            @neurons = Array.new(size) {Neuron.new(Random.rand(), Array.new(), 0, 0)}
-            return
-        end
-        arr = Array.new(nl_size) {Random.rand()}
-        @neurons = Array.new(size) {Neuron.new(Random.rand(), arr, 0, 0)}
-    end
-
-    #calculate the activations for the next layer
-    def propagate(layer)
-        for nl_neuron in layer.neurons
-            nl_neuron.a = 0
-        end
-
-        for neuron in @neurons
-            for nl_id in 0..layer.neurons.length-1
-                layer.neurons[nl_id].a += neuron.w[nl_id] * neuron.z
-            end
-        end
-
-        for nl_neuron in layer.neurons
-            nl_neuron.z = f(nl_neuron.a)
-        end
 
     end
 end
 
-
-class NeuralNetwork
-    attr_accessor :layers
+class Network
+    attr_accessor :w, :neurons
 
     def initialize(layer_sizes)
-        @layers = Array.new()
-        for l in 0..layer_sizes.length-1 do
-            @layers[l] = Layer.new(layer_sizes[l], layer_sizes[l+1])
-        end
+      # TODO: Create methods or functions to make this prettier
+        @neurons = Array.new(layer_sizes.length) {|l| Array.new(layer_sizes[l]) {Neuron.new(rand(), 0, 0) } } 
+        @w = Array.new(layer_sizes.length-1) {|l| Array.new(layer_sizes[l+1]) {Array.new(layer_sizes[l]) {rand()}}}
     end
 
-
     def feedforward(input)
-        for n_id in 0..@layers[0].neurons.length-1
-            @layers[0].neurons[n_id].z = f(input[n_id])
+        @neurons[0].each_with_index do |neuron, n_id|
+            neuron.z = input[n_id]
+            neuron.a = f(neuron.z)
         end
 
-        #ruby ranges include last member
-        for l_id in 0..@layers.length-2
-            @layers[l_id].propagate(@layers[l_id+1])
+        #ranges in ruby include last number ffs
+        for layer in 1..@neurons.length-1
+            @neurons[layer].each_with_index do |target, t_id|
+                @neurons[layer-1].each_with_index do |source, s_id|
+                    target.z += @w[layer-1][t_id][s_id] * source.a 
+                end
+                target.a = f(target.z)
+            end
         end
     end
 end
 
+net = Network.new([4, 5, 3])
+net.feedforward([1, 0, 2, 4])
 
-network = NeuralNetwork.new([5, 6, 12, 3])
-network.feedforward([0, 1, 4, 6, 9])
-puts network.layers[-1].neurons.inspect
+net.neurons[-1].each do |neuron|
+    puts neuron.a
+end
