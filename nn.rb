@@ -65,7 +65,7 @@ class Network
                 @neurons[layer].each_with_index do |source, s_id|
                     target.e += @w[layer-1][s_id][t_id] * source.e 
                     #used weight is no longer relevant, i can update it
-                    @w[layer-1][s_id][t_id] -= source.e * source.a * (1 - source.a) * target.a * @lr
+                    @w[layer-1][s_id][t_id] -= source.e * source.a * (1 - source.a) * target.a * @lr * (-1)
                 end
             end
         end
@@ -90,12 +90,12 @@ def split_inputs(inputs)
     return testing_inputs, training_inputs
 end
 
-data = (0..6).step(0.001).to_a
+data = (0..10).step(0.01).to_a
 testing_inputs, training_inputs = split_inputs(data)
 training_outputs = Array.new(training_inputs.length) {|d| Math.sin(d)}
 testing_outputs = Array.new(testing_inputs.length) {|d| Math.sin(d)}
 #overkill but testing
-net = Network.new([1, 6, 1]) 
+net = Network.new([1, 5, 1]) 
 
 #training
 for i in 0..training_inputs.length-1 do
