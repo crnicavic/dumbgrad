@@ -4,12 +4,15 @@ def f(x)
     return 1 / (1 + Math.exp(-x))
 end
 
-#instead of loading some data, just do a simple sine until shit works
-def test_function(x)
-    return Math.sin(x)
+def argmax(arr)
+    min = 0
+    for i in 1..arr.length-1 do
+        if arr[min] > arr[i]
+            min = i
+        end
+    end
+    return min
 end
-
-
 
 class Neuron
     attr_accessor :b, :a, :z, :e
@@ -26,12 +29,13 @@ end
 class Network
     attr_accessor :w, :neurons, :layer_sizes, :lr
 
-    def initialize(layer_sizes, lr=0.1)
+    def initialize(layer_sizes, lr=0.3)
       # TODO: Create methods or functions to make this prettier and SHORTER
         @neurons = Array.new(layer_sizes.length) {|l| Array.new(layer_sizes[l]) {Neuron.new(0, 0, 0) } } 
-        @w = Array.new(layer_sizes.length-1) {|l| Array.new(layer_sizes[l+1]) {Array.new(layer_sizes[l]) {rand()}}}
+        @w = Array.new(layer_sizes.length-1) {|l| Array.new(layer_sizes[l+1]) {Array.new(layer_sizes[l]) {rand()*100 - 50}}}
         @layer_sizes = layer_sizes
         @lr = lr
+        @cumulative_delta = 0
     end
 
     def feedforward(input)
@@ -40,7 +44,6 @@ class Network
             neuron.a = f(neuron.z)
         end
 
-        #ranges in ruby include last number ffs
         for layer in 1..@neurons.length-1
             @neurons[layer].each_with_index do |target, t_id|
                 target.z = 0
@@ -55,7 +58,7 @@ class Network
     
     def backprop(expected)
         @neurons[-1].each_with_index do |output, o_id|
-            output.e = output.a - expected[o_id]        
+            output.e = (expected[o_id] - output.a) * output.a * (1 - output.a) 
         end
         #now just send the error back
         for layer in (@neurons.length-1).downto(1) do 
@@ -63,55 +66,68 @@ class Network
             @neurons[layer-1].each_with_index do |target, t_id|
                 target.e = 0
                 @neurons[layer].each_with_index do |source, s_id|
-                    target.e += @w[layer-1][s_id][t_id] * source.e 
-                    #used weight is no longer relevant, i can update it
-                    @w[layer-1][s_id][t_id] -= source.e * source.a * (1 - source.a) * target.a * @lr * (-1)
+                    target.e += @w[layer-1][s_id][t_id] * source.e
+                    delta = source.e * target.a * @lr * (-1)
+                    @cumulative_delta += delta.abs()
+                    @w[layer-1][s_id][t_id] -= delta                 
                 end
+                target.e *= target.a * (1 - target.a) 
             end
         end
     end
 
-    def train(data, expected_data)
-    end
-end
-
-#this will be fixed to split outputs but currently 
-#not necessary
-def split_inputs(inputs)
-    training_inputs = []
-    testing_inputs = []
-    inputs.each do |d|
-        if rand() < 0.2
-            testing_inputs.append(d)
-        else
-            training_inputs.append(d)
+    def train(inputs, outputs)
+        #training
+        for i in 0..inputs.length-1 do
+            self.feedforward(inputs[i])
+            self.backprop(outputs[i])
         end
     end
-    return testing_inputs, training_inputs
-end
 
-data = (0..10).step(0.01).to_a
-testing_inputs, training_inputs = split_inputs(data)
-training_outputs = Array.new(training_inputs.length) {|d| Math.sin(d)}
-testing_outputs = Array.new(testing_inputs.length) {|d| Math.sin(d)}
-#overkill but testing
-net = Network.new([1, 5, 1]) 
-
-#training
-for i in 0..training_inputs.length-1 do
-    net.feedforward([training_inputs[i]])
-    net.backprop([training_outputs[i]])
-end
-
-#test
-correct_count = 0
-for i in 0..testing_inputs.length-1 do
-    net.feedforward([testing_inputs[i]])
-    err = net.neurons[-1][0].a - testing_outputs[i]
-    if err.abs() < 0.1
-        correct_count += 1
+    def test(inputs, outputs)
+        correct_count = 0
+        for i in 0..inputs.length-1 do
+            self.feedforward(inputs[i])
+            out = @neurons[-1].map { |n| n.a}
+            if argmax(outputs[i]) == argmax(out)
+                correct_count += 1
+            end
+        end
+        percentage = correct_count.to_f / inputs.length * 100
+        p "Accuracy: %0.2f " % [percentage] 
+        p "Collective weight change: %0.2f" % [@cumulative_delta] 
     end
 end
 
-percentage = correct_count.to_f / testing_inputs.length * 100
-puts percentage
+def split_data(x, y, percentage=0.2)
+    training_x, training_y = [], []
+    testing_x, testing_y = [], []
+    for row in 1..x.length-1 do
+        if rand() < percentage
+            testing_x.append(x[row])
+            testing_y.append(y[row])
+        else
+            training_x.append(x[row])
+            training_y.append(y[row])
+        end
+    end
+    return training_x, training_y, testing_x, testing_y
+end
+
+diagnosis_count = 5
+
+data = CSV.read("heart.csv", converters: :numeric)
+x = data.map{|row| row[0..-2]}
+y = Array.new(x.length) {Array.new(diagnosis_count) {0}}
+
+(data.map {|row| row[-1]}).each_with_index do |output, o_id|
+    y[o_id][output] = 1 
+end
+
+training_x, training_y, testing_x, testing_y = split_data(x, y)
+p testing_x.length
+net = Network.new([training_x[0].length, 10, 10, 20, diagnosis_count])
+
+net.train(training_x, training_y)
+net.test(testing_x, testing_y)
+
