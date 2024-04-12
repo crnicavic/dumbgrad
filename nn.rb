@@ -29,7 +29,7 @@ class Network
     def initialize(layer_sizes, lr=0.1)
       # TODO: Create methods or functions to make this prettier and SHORTER
         @neurons = Array.new(layer_sizes.length) {|l| Array.new(layer_sizes[l]) {Neuron.new(0, 0, 0) } } 
-        @w = Array.new(layer_sizes.length-1) {|l| Array.new(layer_sizes[l+1]) {Array.new(layer_sizes[l]) {rand()}}}
+        @w = Array.new(layer_sizes.length-1) {|l| Array.new(layer_sizes[l+1]) {Array.new(layer_sizes[l]) {rand() * 10 - 5}}}
         @layer_sizes = layer_sizes
         @lr = lr
     end
@@ -55,7 +55,7 @@ class Network
     
     def backprop(expected)
         @neurons[-1].each_with_index do |output, o_id|
-            output.e = output.a - expected[o_id]        
+            output.e = expected[o_id] - output.a 
         end
         #now just send the error back
         for layer in (@neurons.length-1).downto(1) do 
@@ -63,10 +63,11 @@ class Network
             @neurons[layer-1].each_with_index do |target, t_id|
                 target.e = 0
                 @neurons[layer].each_with_index do |source, s_id|
-                    target.e += @w[layer-1][s_id][t_id] * source.e 
+                    target.e += @w[layer-1][s_id][t_id] * source.e
                     #used weight is no longer relevant, i can update it
-                    @w[layer-1][s_id][t_id] -= source.e * source.a * (1 - source.a) * target.a * @lr * (-1)
+                    @w[layer-1][s_id][t_id] -= source.e * target.a * @lr * (-1)
                 end
+                target.e *= target.a * (1 - target.a) 
             end
         end
     end
@@ -90,12 +91,11 @@ def split_inputs(inputs)
     return testing_inputs, training_inputs
 end
 
-data = (0..10).step(0.01).to_a
+data = (0..6.28).step(0.1).to_a
 testing_inputs, training_inputs = split_inputs(data)
-training_outputs = Array.new(training_inputs.length) {|d| Math.sin(d)}
-testing_outputs = Array.new(testing_inputs.length) {|d| Math.sin(d)}
-#overkill but testing
-net = Network.new([1, 5, 1]) 
+training_outputs = Array.new(training_inputs.length) {|d| Math.cos(d)}
+testing_outputs = Array.new(testing_inputs.length) {|d| Math.cos(d)}
+net = Network.new([1, 5, 6, 1]) 
 
 #training
 for i in 0..training_inputs.length-1 do
