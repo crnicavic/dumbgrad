@@ -1,4 +1,5 @@
 # nn-proof-of-concept
 
-A pretty bad implementation that I used to get my head around things.
+Making this public because convenience despite being incomplete
+A pretty bad implementation that is intended for experiments.
 Implemented in ruby because I felt like it.
