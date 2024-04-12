@@ -29,12 +29,13 @@ end
 class Network
     attr_accessor :w, :neurons, :layer_sizes, :lr
 
-    def initialize(layer_sizes, lr=0.1)
+    def initialize(layer_sizes, lr=0.3)
       # TODO: Create methods or functions to make this prettier and SHORTER
         @neurons = Array.new(layer_sizes.length) {|l| Array.new(layer_sizes[l]) {Neuron.new(0, 0, 0) } } 
-        @w = Array.new(layer_sizes.length-1) {|l| Array.new(layer_sizes[l+1]) {Array.new(layer_sizes[l]) {rand()}}}
+        @w = Array.new(layer_sizes.length-1) {|l| Array.new(layer_sizes[l+1]) {Array.new(layer_sizes[l]) {rand()*100 - 50}}}
         @layer_sizes = layer_sizes
         @lr = lr
+        @cumulative_delta = 0
     end
 
     def feedforward(input)
@@ -66,8 +67,9 @@ class Network
                 target.e = 0
                 @neurons[layer].each_with_index do |source, s_id|
                     target.e += @w[layer-1][s_id][t_id] * source.e
-                    #used weight is no longer relevant, i can update it
-                    @w[layer-1][s_id][t_id] -= source.e * target.a * @lr * (-1)
+                    delta = source.e * target.a * @lr * (-1)
+                    @cumulative_delta += delta.abs()
+                    @w[layer-1][s_id][t_id] -= delta                 
                 end
                 target.e *= target.a * (1 - target.a) 
             end
@@ -92,7 +94,8 @@ class Network
             end
         end
         percentage = correct_count.to_f / inputs.length * 100
-        puts percentage
+        p "Accuracy: %0.2f " % [percentage] 
+        p "Collective weight change: %0.2f" % [@cumulative_delta] 
     end
 end
 
@@ -111,28 +114,20 @@ def split_data(x, y, percentage=0.2)
     return training_x, training_y, testing_x, testing_y
 end
 
+diagnosis_count = 5
+
 data = CSV.read("heart.csv", converters: :numeric)
 x = data.map{|row| row[0..-2]}
-y = Array.new(x.length) {Array.new(5) {0}}
+y = Array.new(x.length) {Array.new(diagnosis_count) {0}}
 
 (data.map {|row| row[-1]}).each_with_index do |output, o_id|
     y[o_id][output] = 1 
 end
 
 training_x, training_y, testing_x, testing_y = split_data(x, y)
-net = Network.new([training_x[0].length, 10, 10, 20, 5])
+p testing_x.length
+net = Network.new([training_x[0].length, 10, 10, 20, diagnosis_count])
 
 net.train(training_x, training_y)
 net.test(testing_x, testing_y)
 
-"
-data = (0..6.28).step(0.05).to_a
-testing_inputs, training_inputs = split_inputs(data)
-training_outputs = Array.new(training_inputs.length) {|d| Math.cos(d)}
-testing_outputs = Array.new(testing_inputs.length) {|d| Math.cos(d)}
-
-net = Network.new([1, 5, 1]) 
-
-net.train(testing_inputs, training_outputs)
-net.test(testing_inputs, testing_outputs)
-"
