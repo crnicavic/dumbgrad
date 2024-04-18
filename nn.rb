@@ -1,7 +1,15 @@
 require 'csv'
-
+#TODO: either scale the data down or use a relu
+#TODO: format code to be less sigmoid-specific
+#           i.e put derivative calculation in separate function
+#TODO: put weight adjustments and error backprop in separate loops
+#           because this is fucking unreadable
 def f(x)
-    return 1 / (1 + Math.exp(-x))
+    return (1 / (1 + Math.exp(-x))).to_f
+end
+
+def df(x)
+    return x * (1 - x)
 end
 
 def argmax(arr)
@@ -29,7 +37,7 @@ end
 class Network
     attr_accessor :w, :neurons, :layer_sizes, :lr
 
-    def initialize(layer_sizes, lr=0.3)
+    def initialize(layer_sizes, lr=1)
       # TODO: Create methods or functions to make this prettier and SHORTER
         @neurons = Array.new(layer_sizes.length) {|l| Array.new(layer_sizes[l]) {Neuron.new(0, 0, 0) } } 
         @w = Array.new(layer_sizes.length-1) {|l| Array.new(layer_sizes[l+1]) {Array.new(layer_sizes[l]) {rand()*100 - 50}}}
@@ -58,7 +66,7 @@ class Network
     
     def backprop(expected)
         @neurons[-1].each_with_index do |output, o_id|
-            output.e = (expected[o_id] - output.a) * output.a * (1 - output.a) 
+            output.e = (output.a - expected[o_id]) * df(output.a) 
         end
         #now just send the error back
         for layer in (@neurons.length-1).downto(1) do 
@@ -67,11 +75,17 @@ class Network
                 target.e = 0
                 @neurons[layer].each_with_index do |source, s_id|
                     target.e += @w[layer-1][s_id][t_id] * source.e
-                    delta = source.e * target.a * @lr * (-1)
-                    @cumulative_delta += delta.abs()
-                    @w[layer-1][s_id][t_id] -= delta                 
                 end
-                target.e *= target.a * (1 - target.a) 
+                target.e *= df(target.a) 
+            end
+        end
+        
+        for layer in 0..@neurons.length-2 do
+            @neurons[layer].each_with_index do |source, s_id|
+                @neurons[layer+1].each_with_index do |target, t_id|
+                    @cumulative_delta += (@lr * target.e).abs()
+                    @w[layer][t_id][s_id] -= @lr * target.e
+                end
             end
         end
     end
@@ -88,8 +102,10 @@ class Network
         correct_count = 0
         for i in 0..inputs.length-1 do
             self.feedforward(inputs[i])
+            #map neuron activations to array
             out = @neurons[-1].map { |n| n.a}
-            if argmax(outputs[i]) == argmax(out)
+            
+            if argmax(outputs[i]) == argmax(out) && 1 - out.max < 0.1 
                 correct_count += 1
             end
         end
@@ -116,18 +132,20 @@ end
 
 diagnosis_count = 5
 
+# formatting y so that it mimics the wanted output per epoch
+# y[0] = [0, 0, 0, 1, 0] for example - output for first epoch 
 data = CSV.read("heart.csv", converters: :numeric)
 x = data.map{|row| row[0..-2]}
 y = Array.new(x.length) {Array.new(diagnosis_count) {0}}
 
+# map the last column of the csv to an array, it's value
+# represents which neuron i want to be the most active
 (data.map {|row| row[-1]}).each_with_index do |output, o_id|
     y[o_id][output] = 1 
 end
 
 training_x, training_y, testing_x, testing_y = split_data(x, y)
-p testing_x.length
-net = Network.new([training_x[0].length, 10, 10, 20, diagnosis_count])
+net = Network.new([training_x[0].length, 10, 20, 15 , diagnosis_count])
 
 net.train(training_x, training_y)
 net.test(testing_x, testing_y)
-
