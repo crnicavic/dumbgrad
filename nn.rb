@@ -49,7 +49,7 @@ class Network
     def initialize(layer_sizes, lr=1)
       # TODO: Create methods or functions to make this prettier and SHORTER
         @neurons = Array.new(layer_sizes.length) {|l| Array.new(layer_sizes[l]) {Neuron.new(0, 0, 0) } } 
-        @w = Array.new(layer_sizes.length-1) {|l| Array.new(layer_sizes[l+1]) {Array.new(layer_sizes[l]) {rand()*100 - 50}}}
+        @w = Array.new(layer_sizes.length-1) {|l| Array.new(layer_sizes[l+1]) {Array.new(layer_sizes[l]) {rand()*10 - 5}}}
         @layer_sizes = layer_sizes
         @lr = lr
         @cumulative_delta = 0
@@ -121,6 +121,7 @@ class Network
         percentage = correct_count.to_f / inputs.length * 100
         p "Accuracy: %0.2f " % [percentage] 
         p "Collective weight change: %0.2f" % [@cumulative_delta] 
+        p "learning rate: %0.2f" % [@lr]
     end
 end
 
