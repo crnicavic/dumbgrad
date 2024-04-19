@@ -4,12 +4,21 @@ require 'csv'
 #           i.e put derivative calculation in separate function
 #TODO: put weight adjustments and error backprop in separate loops
 #           because this is fucking unreadable
+""" sigmoid - it sucks
 def f(x)
     return (1 / (1 + Math.exp(-x))).to_f
 end
 
 def df(x)
     return x * (1 - x)
+end
+"""
+def f(x)
+    return x > 0 ? x : 0.3 * x
+end
+
+def df(x)
+    return x > 0 ? 1 : 0.3
 end
 
 def argmax(arr)
@@ -84,7 +93,7 @@ class Network
             @neurons[layer].each_with_index do |source, s_id|
                 @neurons[layer+1].each_with_index do |target, t_id|
                     @cumulative_delta += (@lr * target.e).abs()
-                    @w[layer][t_id][s_id] -= @lr * target.e
+                    @w[layer][t_id][s_id] -= @lr * target.e * source.a
                 end
             end
         end
@@ -105,7 +114,7 @@ class Network
             #map neuron activations to array
             out = @neurons[-1].map { |n| n.a}
             
-            if argmax(outputs[i]) == argmax(out) && 1 - out.max < 0.1 
+            if argmax(outputs[i]) == argmax(out) 
                 correct_count += 1
             end
         end
@@ -130,22 +139,3 @@ def split_data(x, y, percentage=0.2)
     return training_x, training_y, testing_x, testing_y
 end
 
-diagnosis_count = 5
-
-# formatting y so that it mimics the wanted output per epoch
-# y[0] = [0, 0, 0, 1, 0] for example - output for first epoch 
-data = CSV.read("heart.csv", converters: :numeric)
-x = data.map{|row| row[0..-2]}
-y = Array.new(x.length) {Array.new(diagnosis_count) {0}}
-
-# map the last column of the csv to an array, it's value
-# represents which neuron i want to be the most active
-(data.map {|row| row[-1]}).each_with_index do |output, o_id|
-    y[o_id][output] = 1 
-end
-
-training_x, training_y, testing_x, testing_y = split_data(x, y)
-net = Network.new([training_x[0].length, 10, 20, 15 , diagnosis_count])
-
-net.train(training_x, training_y)
-net.test(testing_x, testing_y)
