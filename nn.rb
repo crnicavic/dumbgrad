@@ -143,7 +143,7 @@ def split_data(x, y, percentage: 0.2, shuffle: false, seed: nil)
         r = Random.new(seed)
         #fisher-yates shuffle
         for i in (x.length-1).downto(1)
-            el = (i * r.rand()).floor()
+            el = ((i+1) * r.rand()).floor()
             x[i], x[el] = x[el], x[i]
             y[i], y[el] = y[el], y[i]
         end
