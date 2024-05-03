@@ -47,12 +47,19 @@ class Network
     attr_accessor :w, :neurons, :layer_sizes, :lr
 
     def initialize(layer_sizes, lr=1)
-      # TODO: Create methods or functions to make this prettier and SHORTER
-        @neurons = Array.new(layer_sizes.length) {|l| Array.new(layer_sizes[l]) {Neuron.new(0, 0, 0) } } 
-        @w = Array.new(layer_sizes.length-1) {|l| Array.new(layer_sizes[l+1]) {Array.new(layer_sizes[l]) {rand()*10 - 5}}}
+        @neurons = Array.new(layer_sizes.length) do |l| 
+            init_layer(layer_sizes[l]) 
+        end
+        @w = Array.new(layer_sizes.length-1)  do |l| 
+            Array.new(layer_sizes[l+1]) {Array.new(layer_sizes[l]) {0}}
+        end
         @layer_sizes = layer_sizes
         @lr = lr
         @cumulative_delta = 0
+    end
+
+    def init_layer(layer_size)
+        return Array.new(layer_size) {Neuron.new(0, 0, 0) } 
     end
 
     def feedforward(input)
@@ -94,6 +101,7 @@ class Network
                 @neurons[layer+1].each_with_index do |target, t_id|
                     @cumulative_delta += (@lr * target.e).abs()
                     @w[layer][t_id][s_id] -= @lr * target.e * source.a
+                    source.b -= @lr * target.e
                 end
             end
         end
