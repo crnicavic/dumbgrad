@@ -133,17 +133,30 @@ class Network
     end
 end
 
-def split_data(x, y, percentage=0.2)
+def split_data(x, y, percentage: 0.2, shuffle: false, seed: nil)
     training_x, training_y = [], []
     testing_x, testing_y = [], []
-    for row in 1..x.length-1 do
-        if rand() < percentage
-            testing_x.append(x[row])
-            testing_y.append(y[row])
-        else
-            training_x.append(x[row])
-            training_y.append(y[row])
+    n_train = ((1 - percentage) * (x.length - 1)).floor
+    n_test = x.length-n_train
+    if shuffle == true
+        seed = seed.nil? ? (Time.now.to_i * rand()).to_i : seed
+        r = Random.new(seed)
+        #fisher-yates shuffle
+        for i in (x.length-1).downto(1)
+            el = (i * r.rand()).floor()
+            x[i], x[el] = x[el], x[i]
+            y[i], y[el] = y[el], y[i]
         end
+    end
+
+    for row in 0..n_train do
+        training_x.append(x[row])
+        training_y.append(y[row])
+    end
+
+    for row in n_train+1..x.length-1 do
+       testing_x.append(x[row])
+       testing_y.append(y[row])
     end
     return training_x, training_y, testing_x, testing_y
 end
