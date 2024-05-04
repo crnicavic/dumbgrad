@@ -1,9 +1,5 @@
 require 'csv'
-#TODO: either scale the data down or use a relu
-#TODO: format code to be less sigmoid-specific
-#           i.e put derivative calculation in separate function
-#TODO: put weight adjustments and error backprop in separate loops
-#           because this is fucking unreadable
+
 """ sigmoid - it sucks
 def f(x)
     return (1 / (1 + Math.exp(-x))).to_f
@@ -13,6 +9,7 @@ def df(x)
     return x * (1 - x)
 end
 """
+
 def f(x)
     return x > 0 ? x : 0.3 * x
 end
@@ -22,13 +19,13 @@ def df(x)
 end
 
 def argmax(arr)
-    min = 0
+    max = 0
     for i in 1..arr.length-1 do
-        if arr[min] > arr[i]
-            min = i
+        if arr[max] < arr[i]
+            max = i
         end
     end
-    return min
+    return max
 end
 
 class Neuron
@@ -38,7 +35,7 @@ class Neuron
         @b = b
         @a = a
         @z = z
-        @e = 0      #really lazy
+        @e = 0 
 
     end
 end
@@ -84,9 +81,9 @@ class Network
         @neurons[-1].each_with_index do |output, o_id|
             output.e = (output.a - expected[o_id]) * df(output.a) 
         end
+
         #now just send the error back
         for layer in (@neurons.length-1).downto(1) do 
-            #this time it goes backwards source is the target, and vice versa
             @neurons[layer-1].each_with_index do |target, t_id|
                 target.e = 0
                 @neurons[layer].each_with_index do |source, s_id|
@@ -120,8 +117,7 @@ class Network
         for i in 0..inputs.length-1 do
             self.feedforward(inputs[i])
             #map neuron activations to array
-            out = @neurons[-1].map { |n| n.a}
-            
+            out = @neurons[-1].map {|n| n.a}
             if argmax(outputs[i]) == argmax(out) 
                 correct_count += 1
             end
@@ -141,7 +137,6 @@ def split_data(x, y, percentage: 0.2, shuffle: false, seed: nil)
     if shuffle == true
         seed = seed.nil? ? (Time.now.to_i * rand()).to_i : seed
         r = Random.new(seed)
-        #fisher-yates shuffle
         for i in (x.length-1).downto(1)
             el = ((i+1) * r.rand()).floor()
             x[i], x[el] = x[el], x[i]
