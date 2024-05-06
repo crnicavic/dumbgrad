@@ -104,12 +104,15 @@ class Network
         end
     end
 
-    def train(inputs, outputs)
-        #training
-        for i in 0..inputs.length-1 do
-            self.feedforward(inputs[i])
-            self.backprop(outputs[i])
+    def train(inputs, outputs, n_epochs: 100)
+        n_epochs.times do |epoch|
+            for i in 0..inputs.length-1 do
+                self.feedforward(inputs[i])
+                self.backprop(outputs[i])
+            end
+            print "Epochs elapsed: %d\r" % [epoch]
         end
+        print "\n"
     end
 
     def test(inputs, outputs)
