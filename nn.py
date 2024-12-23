@@ -36,7 +36,9 @@ class Network:
 
 		for l in range(len(layer_sizes)-1):
 			self.weights.append(np.zeros((layer_sizes[l+1], layer_sizes[l])))
-
+		
+		# how much to change the weights by
+		self.dweights = np.copy(weights)
 	
 	def feedforward(self, input_data):
 		for i in range(self.layer_sizes[0]):
@@ -53,11 +55,10 @@ class Network:
 
 	def backprop(self, output):
 		for i in range(layer_sizes[-1]):
-			if output == i:
-				self.e[-1][i] = 0.5 * (1 - self.a[-1][i]) ** 2
+			if output != i:
+				self.e[-1][i] = -self.a[-1][i]
 			else:
-				self.e[-1][i] = 0.5 * (-self.a[-1][i]) ** 2
-			
+				self.e[-1][i] = 1 - self.a[-1][i]
 
 
 
