@@ -28,19 +28,22 @@ class Network:
 		self.layer_sizes = layer_sizes
 		self.lr = lr
 		self.activation = activation_f
+		# pre activation function output of neuron
 		self.z = [[0 for _ in range(l)] for l in layer_sizes]
+		self.a = [[0 for _ in range(l)] for l in layer_sizes]
 		self.b = [[0 for _ in range(l)] for l in layer_sizes]
 		#backprop bs
-		self.e = [[0 for _ in range(l)] for l in layer_sizes]
 		self.weights = []
 
 		for l in range(len(layer_sizes)-1):
 			self.weights.append(np.zeros((layer_sizes[l+1], layer_sizes[l])))
 		
+		# TODO: delete this if I don't need it once network is written
 		# how much to change the weights by
 		self.dweights = np.copy(weights)
 	
 	def feedforward(self, input_data):
+		# activation function to first layer
 		for i in range(self.layer_sizes[0]):
 			self.z[0][i] = self.activation.f(input_data[i])
 
@@ -50,21 +53,41 @@ class Network:
 
 			# apply activation function
 			for i in range(len(self.z[l+1])):
-				self.z[l+1][i] = self.activation.f(self.z[l+1][i])
+				self.a[l+1][i] = self.activation.f(self.z[l+1][i])
 
 
 	def backprop(self, output):
-		for i in range(layer_sizes[-1]):
-			if output != i:
-				self.e[-1][i] = -self.a[-1][i]
-			else:
-				self.e[-1][i] = 1 - self.a[-1][i]
+		# TODO: if code gets too slow this is probably the first place to optimize
+		delta = [[0 for _ in range(l)] for l in self.layer_sizes]
 
+		# storing derivatives of the cost by weights and biases
+		dw = []
+		for l in range(len(self.layer_sizes)-1):
+			dw.append(np.zeros((self.layer_sizes[l+1], self.layer_sizes[l])))
+
+		db = [[0 for _ in range(l)] for l in layer_sizes]
+
+		# calculate delta error for last layer
+		for i in range(self.layer_sizes[-1]):
+			if output != i:
+				delta[-1][i] = self.a[-1][i]
+			else:
+				delta[-1][i] = self.a[-1][i] - 1
+
+			delta[-1][i] *= activation.df(self.z[-1][i])
+		
+		# delta error for all the other ones(skip last layer)
+		for l in reversed(range(len(self.layer_sizes)-1)):
+			delta[l] = np.dot(self.weights[l].transpose(), delta[l+1])
+			for i in range(self.layer_sizes[l]):
+				delta[l][i] *= activation.df(self.z[l][i])
+
+		return delta
 
 
 	def train(self, inputs, outputs):
-		for i in range(len(inputs)):
-			self.feedforward(inputs[i])
+		for k in range(len(inputs)):
+			self.feedforward(inputs[k])
 
 
 	def test(self, inputs, outputs):
