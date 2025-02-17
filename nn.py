@@ -38,6 +38,10 @@ def create_weights(layer_sizes):
 def non_homogenous_add(a, b):
     for i in range(len(a)):
         a[i] = np.add(a[i], b[i])
+	
+def non_homogenous_sub(a, b):
+    for i in range(len(a)):
+        a[i] = np.subtract(a[i], b[i])
 
 def non_homogenous_divide(a, b):
     for i in range(len(a)):
@@ -60,17 +64,17 @@ class Network:
 		# activation function to first layer
 		for i in range(self.layer_sizes[0]):
 			self.z[0][i] = input_data[i]
-			self.a[0][i] = self.activation.f(self.z[0][i])
+			#chatgpt says to not apply the transform function
+			self.a[0][i] = self.z[0][i]
 
 		for l in range(len(self.weights)):
 			# getting fancy
-			self.z[l+1] = np.dot(self.weights[l], self.a[l])
+			self.z[l+1] = np.dot(self.weights[l], self.a[l]) + self.b[l+1]
 
 			# apply activation function
 			for i in range(len(self.z[l+1])):
 				self.a[l+1][i] = self.activation.f(self.z[l+1][i])
-			
-
+		
 	def backprop(self, output):
 		# ls - neuron count in each layer
 		delta = [[0 for _ in range(ls)] for ls in self.layer_sizes]
@@ -82,7 +86,6 @@ class Network:
 			else:
 				delta[-1][i] = 1 - self.a[-1][i]
 
-			print(delta[-1][i])
 
 			delta[-1][i] *= self.activation.df(self.z[-1][i])
 		
@@ -113,26 +116,22 @@ class Network:
 
 
 	def train(self, inputs, outputs, batchsize):
-		dw = create_weights(self.layer_sizes)
-		db = [[0 for _ in range(l)] for l in self.layer_sizes]
-
 		for _k in range(0, len(inputs), batchsize):
+			dw = create_weights(self.layer_sizes)
+			db = [[0 for _ in range(l)] for l in self.layer_sizes]
 			for k in range(_k, _k + batchsize):
 				if k >= len(inputs):
 					return
 				self.feedforward(inputs[k])
 				_dw, _db = self.gradient(outputs[k])
 
-				if k == 50:
-					print(_db)
-				
 				non_homogenous_add(dw, _dw)
 				non_homogenous_add(db, _db)
 
 			non_homogenous_divide(dw, batchsize)
 			non_homogenous_divide(db, batchsize)
-			non_homogenous_add(self.weights, dw)
-			non_homogenous_add(self.b, db)
+			non_homogenous_sub(self.weights, dw)
+			non_homogenous_sub(self.b, db)
 
 
 	def test(self, inputs, outputs):
@@ -150,15 +149,15 @@ class Network:
 		print(self.weights)
 
 
-#data = pd.read_csv("heart.csv")
-#scaler = MinMaxScaler()
-data = load_digits()
-#y = data.iloc[:, -1]
-#x = data.iloc[:, :-1]
-sizes = [len(x.iloc[0]), 5, y.nunique()]
+data = pd.read_csv("heart.csv")
+scaler = MinMaxScaler()
+y = data.iloc[:, -1]
+x = data.iloc[:, :-1]
+sizes = [len(x.iloc[0]), 5, 10, y.nunique()]
 x = scaler.fit_transform(x)
 x_train, x_test, y_train, y_test = train_test_split(x, y, test_size=0.25, shuffle=False) 
 
 net = Network(sizes, Sigmoid())
+net.test(x_test, y_test.to_numpy())
 net.train(x_train, y_train.to_numpy(), 5)
 net.test(x_test, y_test.to_numpy())
