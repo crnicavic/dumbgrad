@@ -82,7 +82,7 @@ class Network:
 
 		# calculate delta error for last layer
 		for i in range(self.layer_sizes[-1]):
-			delta[-1][i] = output[i] - self.a[-1][i]
+			delta[-1][i] = self.a[-1][i] - output[i]
 
 			delta[-1][i] *= self.activation.df(self.z[-1][i])
 		
@@ -119,6 +119,7 @@ class Network:
 			for k in range(_k, _k + batchsize):
 				if k >= len(inputs):
 					return
+				# TODO: calculate accuracy during training
 				self.feedforward(inputs[k])
 				_dw, _db = self.gradient(outputs[k])
 
@@ -148,7 +149,7 @@ x = x / 16		#normalize
 num_classes = len(np.unique(y))
 y = to_categorical(y, num_classes=num_classes)
 x_train, x_test, y_train, y_test = train_test_split(x, y, test_size=0.2, shuffle=False) 
-sizes = [len(x[0]), 50, 50, num_classes]
+sizes = [len(x[0]), 30, 20, num_classes]
 
 
 net = Network(sizes, Sigmoid())
