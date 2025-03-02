@@ -1,6 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import pandas as pd
+from keras.utils import to_categorical
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import MinMaxScaler
 from sklearn.datasets import load_digits
@@ -81,11 +82,7 @@ class Network:
 
 		# calculate delta error for last layer
 		for i in range(self.layer_sizes[-1]):
-			if output != i:
-				delta[-1][i] = -self.a[-1][i]
-			else:
-				delta[-1][i] = 1 - self.a[-1][i]
-
+			delta[-1][i] = output[i] - self.a[-1][i]
 
 			delta[-1][i] *= self.activation.df(self.z[-1][i])
 		
@@ -128,36 +125,33 @@ class Network:
 				non_homogenous_add(dw, _dw)
 				non_homogenous_add(db, _db)
 
-			non_homogenous_divide(dw, batchsize)
-			non_homogenous_divide(db, batchsize)
+			non_homogenous_divide(dw, batchsize/2)
+			non_homogenous_divide(db, batchsize/2)
 			non_homogenous_sub(self.weights, dw)
 			non_homogenous_sub(self.b, db)
 
 
 	def test(self, inputs, outputs):
 		correct_count = 0
-		print(len(inputs))
 		for i in range(len(inputs)):
 			self.feedforward(inputs[i])
 
-			if outputs[i] == np.argmax(self.a[-1]):
+			if np.argmax(outputs[i]) == np.argmax(self.a[-1]):
 				correct_count += 1
 
 		acc = correct_count / len(inputs) * 100
 		print("Accuracy: %.2f" % acc)
 		print(correct_count)
-		print(self.weights)
 
+x, y = load_digits(return_X_y=True)
+x = x / 16		#normalize
+num_classes = len(np.unique(y))
+y = to_categorical(y, num_classes=num_classes)
+x_train, x_test, y_train, y_test = train_test_split(x, y, test_size=0.2, shuffle=False) 
+sizes = [len(x[0]), 50, 50, num_classes]
 
-data = pd.read_csv("heart.csv")
-scaler = MinMaxScaler()
-y = data.iloc[:, -1]
-x = data.iloc[:, :-1]
-sizes = [len(x.iloc[0]), 5, 10, y.nunique()]
-x = scaler.fit_transform(x)
-x_train, x_test, y_train, y_test = train_test_split(x, y, test_size=0.25, shuffle=False) 
 
 net = Network(sizes, Sigmoid())
-net.test(x_test, y_test.to_numpy())
-net.train(x_train, y_train.to_numpy(), 5)
-net.test(x_test, y_test.to_numpy())
+net.test(x_test, y_test)
+net.train(x_train, y_train, 10)
+net.test(x_test, y_test)
