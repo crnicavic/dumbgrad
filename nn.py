@@ -6,6 +6,7 @@ from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import MinMaxScaler
 from sklearn.datasets import load_digits
 from abc import ABC, abstractmethod
+import engine
 
 class ActivationFunction(ABC):
 
@@ -28,7 +29,7 @@ class Sigmoid(ActivationFunction):
 
 class Neuron:
 	def __init__(self, number_inputs):
-		self.w = [Value(np.random.uniform(-1, 1) for _ in range(number_inputs)]
+		self.w = [Value(np.random.uniform(-1, 1)) for _ in range(number_inputs)]
 		self.b = Value(0)
 	
 	def __call__(self, x):
