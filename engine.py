@@ -1,10 +1,15 @@
 class Value:
 	def __init__(self, data, op=None, children=[]):
 		self.data = data
-		self.grad = 0 # what is the derrivative of the output by this variable
+		self.grad = 1 # what is the derrivative of the output by this variable
 		self.children = children
 		self.op = op
 		self.label = ''
+
+
+	def tanh(self):
+		out = Value(self.data, 'tanh', children=[self])
+		return out
 
 	def __add__(self, number):
 		out = Value(self.data + number.data, '+', children=[self, number])
@@ -27,6 +32,10 @@ class Value:
 			
 			for child in self.children:
 				child.grad += self.grad * product / child.data
+		elif self.op == 'tanh':
+			# there is only one child
+			child = self.children[0]
+			child.grad += (1 - self.data**2) * self.grad
 		
 		for child in self.children:
 			child.backprop()
