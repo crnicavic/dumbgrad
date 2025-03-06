@@ -39,6 +39,12 @@ class Neuron:
 	def parameters(self):
 		return self.w + [self.b]
 
-n = Neuron(4)
-print(n([3, 1, 2, 4]))
-print(n.parameters)
+n = Neuron(2)
+y = n([3, 1])
+y.grad = 1
+y.label = 'y'
+y.backprop()
+print(y)
+for p in n.parameters():
+	print(p)
+

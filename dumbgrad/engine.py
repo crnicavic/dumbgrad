@@ -1,14 +1,15 @@
+import numpy as np
 class Value:
 	def __init__(self, data, op=None, children=[]):
 		self.data = data
-		self.grad = 1 # what is the derrivative of the output by this variable
+		self.grad = 0 # what is the derrivative of the output by this variable
 		self.children = children
 		self.op = op
 		self.label = ''
 
 
 	def tanh(self):
-		out = Value(self.data, 'tanh', children=[self])
+		out = Value(np.tanh(self.data), 'tanh', children=[self])
 		return out
 
 	def __add__(self, number):
@@ -26,6 +27,7 @@ class Value:
 
 	def __rmul__(self, number):
 		return self * number
+
 	# set the gradient of children
 	def backprop(self):
 		if self.op == '+':
