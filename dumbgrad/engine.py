@@ -2,12 +2,12 @@ import numpy as np
 from graph import draw_dot
 
 class Value:
-	def __init__(self, data, op=None, children=[]):
+	def __init__(self, data, op=None, children=[], label=''):
 		self.data = data
 		self.grad = 0 # what is the derrivative of the output by this variable
 		self.children = children
 		self.op = op
-		self.label = ''
+		self.label = label
 
 
 	def tanh(self):
@@ -50,16 +50,15 @@ class Value:
 			for child in self.children:
 				child.grad += self.grad # nice and simple
 		elif self.op == '*':
-			self.children[0].grad += self.children[1].grad
-			self.children[1].grad += self.children[0].grad
+			self.children[0].grad += self.children[1].data * self.grad
+			self.children[1].grad += self.children[0].data * self.grad
 		elif self.op == 'tanh':
 			self.children[0].grad += (1 - self.data**2) * self.grad
 		elif self.op == '-':
 			self.children[0].grad += self.grad
 			self.children[1].grad -= self.grad
 		elif self.op == '**':
-			self.children[0].grad += self.children[1].data * self.data / self.children[0].data
-			self.children[1].grad += self.data * np.log(self.children[0].data)
+			self.children[0].grad += self.children[1].data * (self.children[0].data ** (self.children[1].data -1)) * self.grad
 
 		for child in self.children:
 			child.backprop()
