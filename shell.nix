@@ -10,6 +10,7 @@ mkShell {
 			python311
 			python311Packages.pip
 			python311Packages.tkinter						
+			graphviz
 		  ];
 		    shellHook = ''
 				    export LD_LIBRARY_PATH=$NIX_LD_LIBRARY_PATH
