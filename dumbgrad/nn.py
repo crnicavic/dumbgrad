@@ -29,8 +29,8 @@ class Sigmoid(ActivationFunction):
 
 class Neuron:
 	def __init__(self, number_inputs):
-		self.w = [Value(np.random.uniform(-1, 1)) for _ in range(number_inputs)]
-		self.b = Value(0)
+		self.w = [Value(np.random.uniform(-1, 1), label='w') for _ in range(number_inputs)]
+		self.b = Value(0,label='b')
 	
 	def __call__(self, x):
 		act = sum((wi * xi) for (wi, xi) in zip(self.w, x)) + self.b
@@ -65,29 +65,15 @@ class Network:
 		return [p for l in self.layers for p in l.parameters()]
 	
 	def train(self, inputs, outputs):
-		for _ in range(1):
+		for _ in range(20):
 			y_pred = [self(x) for x in inputs]
-			print(y_pred, outputs)
-			diff = [yout - ypred for (yout, ypred) in zip(outputs, y_pred)]
+			diff = [yout - ypred[0] for (yout, ypred) in zip(outputs, y_pred)]
 			loss = sum([d**2 for d in diff])
 
 			loss.grad = 1
-			print(loss)
 			loss.backprop()
 			for p in self.parameters():
-				print(p)
 				p.data -= 0.01 * p.grad
-				print(p)
+			print(loss)
 
 
-n = Network(2, [4, 1])
-
-x = [
-	[0, 0],
-	[1, 0],
-	[0, 1],
-	[1, 1],
-]
-
-y = [0, 1, 1, 0]
-n.train(x, y)
