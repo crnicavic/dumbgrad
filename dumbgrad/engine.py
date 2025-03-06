@@ -1,4 +1,6 @@
 import numpy as np
+from graph import draw_dot
+
 class Value:
 	def __init__(self, data, op=None, children=[]):
 		self.data = data
@@ -20,6 +22,15 @@ class Value:
 	def __radd__(self, number):
 		return self + number
 
+	def __sub__(self, number):
+		number = number if isinstance(number, Value) else Value(number)
+		out = Value(self.data - number.data, '-', children=[self, number])
+		return out
+
+	def __rsub__(self, number):
+		number = number if isinstance(number, Value) else Value(number)
+		return number - self
+
 	def __mul__(self, number):
 		number = number if isinstance(number, Value) else Value(number)
 		out = Value(self.data * number.data, '*', children=[self, number])
@@ -28,40 +39,30 @@ class Value:
 	def __rmul__(self, number):
 		return self * number
 
+	def __pow__(self, number):
+		number = number if isinstance(number, Value) else Value(number)
+		out = Value(self.data ** number.data, '**', children=[self, number])
+		return out
+
 	# set the gradient of children
 	def backprop(self):
 		if self.op == '+':
 			for child in self.children:
 				child.grad += self.grad # nice and simple
 		elif self.op == '*':
-			# shit
-			product = 1
-			for child in self.children:
-				product *= child.data
-			
-			for child in self.children:
-				child.grad += self.grad * product / child.data
+			self.children[0].grad += self.children[1].grad
+			self.children[1].grad += self.children[0].grad
 		elif self.op == 'tanh':
-			# there is only one child
-			child = self.children[0]
-			child.grad += (1 - self.data**2) * self.grad
-		
+			self.children[0].grad += (1 - self.data**2) * self.grad
+		elif self.op == '-':
+			self.children[0].grad += self.grad
+			self.children[1].grad -= self.grad
+		elif self.op == '**':
+			self.children[0].grad += self.children[1].data * self.data / self.children[0].data
+			self.children[1].grad += self.data * np.log(self.children[0].data)
+
 		for child in self.children:
 			child.backprop()
 
 	def __repr__(self):
-		return f"{self.label} = {self.data}, gradient = {self.grad}, op = {self.op}"
-"""
-a = Value(3); a.label = 'a'
-b = Value(4); b.label = 'b'
-c = a * b; c.label = 'c'
-d = c * b; d.label = 'd'
-e = d * a; e.label = 'e'
-e.grad = 1
-e.backprop()
-print(a)
-print(b)
-print(c)
-print(d)
-print(e)
-"""
+		return f"data = {self.data}, gradient = {self.grad}, op = {self.op}"
