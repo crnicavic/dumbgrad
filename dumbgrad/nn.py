@@ -65,7 +65,7 @@ class Network:
 		return [p for l in self.layers for p in l.parameters()]
 	
 	def train(self, inputs, outputs):
-		for _ in range(20):
+		for _ in range(1000):
 			y_pred = [self(x) for x in inputs]
 			diff = [yout - ypred[0] for (yout, ypred) in zip(outputs, y_pred)]
 			loss = sum([d**2 for d in diff])
@@ -73,7 +73,8 @@ class Network:
 			loss.grad = 1
 			loss.backprop()
 			for p in self.parameters():
-				p.data -= 0.01 * p.grad
+				p.data -= 0.05 * p.grad
+				p.grad = 0
 			print(loss)
 
 
