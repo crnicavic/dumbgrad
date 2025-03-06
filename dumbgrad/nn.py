@@ -35,16 +35,29 @@ class Neuron:
 	def __call__(self, x):
 		act = sum((wi * xi) for (wi, xi) in zip(self.w, x)) + self.b
 		return act.tanh()
-	
+
 	def parameters(self):
 		return self.w + [self.b]
 
-n = Neuron(2)
-y = n([3, 1])
-y.grad = 1
-y.label = 'y'
-y.backprop()
-print(y)
-for p in n.parameters():
-	print(p)
 
+class Layer:
+	def __init__(self, number_inputs, number_outputs):
+		self.neurons = [Neuron(number_inputs) for _ in range(number_outputs)]
+	
+	def __call__(self, x):
+		out = [n(x) for n in self.neurons]
+		return out
+
+	def parameters(self):
+		return [p for n in self.neurons for p in n.parameters()]
+
+l = Layer(2, 3)
+y = l([1, 2])
+for o in y:
+	o.grad = 1
+	o.backprop()
+	print(o)
+
+print("\n")
+for p in l.parameters():
+	print(p)
