@@ -46,20 +46,21 @@ class Value:
 
 	# set the gradient of children
 	def backprop(self):
-		if self.op == '+':
-			for child in self.children:
-				child.grad += self.grad # nice and simple
-		elif self.op == '*':
-			self.children[0].grad += self.children[1].data * self.grad
-			self.children[1].grad += self.children[0].data * self.grad
-		elif self.op == 'tanh':
-			self.children[0].grad += (1 - self.data**2) * self.grad
-		elif self.op == '-':
-			self.children[0].grad += self.grad
-			self.children[1].grad -= self.grad
-		elif self.op == '**':
-			#TODO: make this expression shorter
-			self.children[0].grad += self.children[1].data * (self.children[0].data ** (self.children[1].data -1)) * self.grad
+		match self.op:
+			case '+':
+				self.children[0].grad += self.grad
+				self.children[1].grad += self.grad
+			case '*':
+				self.children[0].grad += self.children[1].data * self.grad
+				self.children[1].grad += self.children[0].data * self.grad
+			case 'tanh':
+				self.children[0].grad += (1 - self.data**2) * self.grad
+			case '-':
+				self.children[0].grad += self.grad
+				self.children[1].grad -= self.grad
+			case '**':
+				#TODO: make this expression shorter
+				self.children[0].grad += self.children[1].data * (self.children[0].data ** (self.children[1].data -1)) * self.grad
 
 		for child in self.children:
 			child.backprop()
