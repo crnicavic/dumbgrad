@@ -46,24 +46,26 @@ class Value:
 
 	# set the gradient of children
 	def backprop(self):
-		match self.op:
-			case '+':
-				self.children[0].grad += self.grad
-				self.children[1].grad += self.grad
-			case '*':
-				self.children[0].grad += self.children[1].data * self.grad
-				self.children[1].grad += self.children[0].data * self.grad
-			case 'tanh':
-				self.children[0].grad += (1 - self.data**2) * self.grad
-			case '-':
-				self.children[0].grad += self.grad
-				self.children[1].grad -= self.grad
-			case '**':
-				#TODO: make this expression shorter
-				self.children[0].grad += self.children[1].data * (self.children[0].data ** (self.children[1].data -1)) * self.grad
+		self.grad = 1
+		nodes = [self]
+		while nodes:
+			node = nodes.pop()
+			match node.op:
+				case '+':
+					node.children[0].grad += node.grad
+					node.children[1].grad += node.grad
+				case '*':
+					node.children[0].grad += node.children[1].data * node.grad
+					node.children[1].grad += node.children[0].data * node.grad
+				case 'tanh':
+					node.children[0].grad += (1 - node.data**2) * node.grad
+				case '-':
+					node.children[0].grad += node.grad
+					node.children[1].grad -= node.grad
+				case '**':
+					#TODO: make this expression shorter
+					node.children[0].grad += node.children[1].data * (node.children[0].data ** (node.children[1].data -1)) * node.grad
 
-		for child in self.children:
-			child.backprop()
 
 	def __repr__(self):
 		return f"data = {self.data}, gradient = {self.grad}, op = {self.op}"
