@@ -58,6 +58,7 @@ class Value:
 			self.children[0].grad += self.grad
 			self.children[1].grad -= self.grad
 		elif self.op == '**':
+			#TODO: make this expression shorter
 			self.children[0].grad += self.children[1].data * (self.children[0].data ** (self.children[1].data -1)) * self.grad
 
 		for child in self.children:

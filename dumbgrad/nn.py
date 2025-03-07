@@ -64,11 +64,15 @@ class Network:
 	def parameters(self):
 		return [p for l in self.layers for p in l.parameters()]
 	
-	def train(self, inputs, outputs):
-		for _ in range(1000):
+	def zero_grad(self):
+		for p in self.parameters():
+			p.grad = 0
+
+	def train(self, inputs, outputs, epochs=100):
+		for _ in range(epochs):
 			y_pred = [self(x) for x in inputs]
-			diff = [yout - ypred[0] for (yout, ypred) in zip(outputs, y_pred)]
-			loss = sum([d**2 for d in diff])
+			diff = [np.subtract(yout, ypred) for (yout, ypred) in zip(outputs, y_pred)]
+			loss = sum([sum(np.power(d, 2).tolist()) for d in diff])
 
 			loss.grad = 1
 			loss.backprop()
