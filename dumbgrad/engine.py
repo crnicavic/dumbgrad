@@ -9,7 +9,6 @@ class Value:
 		self.op = op
 		self.label = label
 
-
 	def tanh(self):
 		out = Value(np.tanh(self.data), 'tanh', children=[self])
 		return out
@@ -47,9 +46,19 @@ class Value:
 	# set the gradient of children
 	def backprop(self):
 		self.grad = 1
-		nodes = [self]
-		while nodes:
-			node = nodes.pop()
+		topo = []
+		visited = set()
+		stack = [self]
+
+		# **Iterative Topological Sorting**
+		while stack:
+			node = stack.pop()
+			if node not in visited:
+				visited.add(node)
+				topo.append(node)
+				stack.extend(node.children)  # Push children for processing
+
+		for node in topo:
 			match node.op:
 				case '+':
 					node.children[0].grad += node.grad
@@ -65,7 +74,6 @@ class Value:
 				case '**':
 					#TODO: make this expression shorter
 					node.children[0].grad += node.children[1].data * (node.children[0].data ** (node.children[1].data -1)) * node.grad
-
 
 	def __repr__(self):
 		return f"data = {self.data}, gradient = {self.grad}, op = {self.op}"
