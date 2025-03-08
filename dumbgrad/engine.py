@@ -46,6 +46,10 @@ class Value:
 		out = Value(self.data ** number.data, '**', children=[self, number])
 		return out
 
+	def __gt__(self, number):
+		number = number if isinstance(number, Value) else Value(number)
+		if self.data > number.data:
+			return True
 
 	def make_topo(self):
 		topo = []

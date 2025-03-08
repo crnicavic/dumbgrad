@@ -43,7 +43,7 @@ class Network:
 		for p in self.parameters():
 			p.grad = 0
 
-	def train(self, inputs, outputs, omega1=0.9, omega2=0.99, lr=0.05, epochs=100, eps = 1e-3):
+	def train(self, inputs, outputs, omega1=0.9, omega2=0.99, lr=0.08, epochs=100, eps = 1e-6):
 		"""
 		 this builds the entire graph of the network
 		 and since i am calculating the loss for all
@@ -55,16 +55,18 @@ class Network:
 		diff = np.subtract(outputs, y_pred)
 		loss = np.sum(np.power(diff, 2))
 		topo = loss.make_topo()
+		t = 0
 		for _ in range(epochs):
 
 			print(loss)
 			loss.backprop(topo)
+			t += 1
 			for p in self.parameters():
 				p.m = omega1 * p.m + (1 - omega1) * p.grad
 				p.v = omega2 * p.v + (1 - omega2) * p.grad**2
 
-				m_hat = p.m / (1 - omega1)
-				v_hat = p.v / (1 - omega2)
+				m_hat = p.m / (1 - omega1 ** t)
+				v_hat = p.v / (1 - omega2 ** t)
 
 				p.data = p.data - lr * m_hat / (np.sqrt(v_hat) + eps)
 			for node in reversed(topo):
@@ -72,3 +74,12 @@ class Network:
 			
 		return loss
 
+	def test(self, inputs, outputs):
+		# this will need to be optimized
+		y_pred = [self(x) for x in inputs]
+		correct_count = 0
+		for pred, output in zip(y_pred, outputs):
+			if np.argmax(pred) == np.argmax(output):
+				correct_count += 1
+
+		print("accuracy: ", correct_count / len(outputs))
