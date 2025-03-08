@@ -43,7 +43,7 @@ class Network:
 		for p in self.parameters():
 			p.grad = 0
 
-	def train(self, inputs, outputs, epochs=100):
+	def train(self, inputs, outputs, omega1=0.9, omega2=0.99, lr=0.05, epochs=100, eps = 1e-3):
 		"""
 		 this builds the entire graph of the network
 		 and since i am calculating the loss for all
@@ -60,9 +60,13 @@ class Network:
 			print(loss)
 			loss.backprop(topo)
 			for p in self.parameters():
-				p.data -= 0.05 * p.grad
-				p.grad = 0
+				p.m = omega1 * p.m + (1 - omega1) * p.grad
+				p.v = omega2 * p.v + (1 - omega2) * p.grad**2
 
+				m_hat = p.m / (1 - omega1)
+				v_hat = p.v / (1 - omega2)
+
+				p.data = p.data - lr * m_hat / (np.sqrt(v_hat) + eps)
 			for node in reversed(topo):
 				node.update()
 			

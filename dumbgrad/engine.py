@@ -8,6 +8,8 @@ class Value:
 		self.children = children
 		self.op = op
 		self.label = label
+		self.m = 0
+		self.v = 0
 
 	def tanh(self):
 		out = Value(np.tanh(self.data), 'tanh', children=[self])
