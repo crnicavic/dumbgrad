@@ -2,8 +2,9 @@ import numpy as np
 from engine import Value
 
 class Neuron:
-	def __init__(self, number_inputs):
-		self.w = [Value(np.random.uniform(-1, 1), label='w') for _ in range(number_inputs)]
+	def __init__(self, number_inputs, number_outputs):
+		limit = np.sqrt(6 / (number_inputs + number_outputs))
+		self.w = [Value(np.random.uniform(-limit, limit), label='w') for _ in range(number_inputs)]
 		self.b = Value(0,label='b')
 	
 	def __call__(self, x):
@@ -16,7 +17,7 @@ class Neuron:
 
 class Layer:
 	def __init__(self, number_inputs, number_outputs):
-		self.neurons = [Neuron(number_inputs) for _ in range(number_outputs)]
+		self.neurons = [Neuron(number_inputs, number_outputs) for _ in range(number_outputs)]
 	
 	def __call__(self, x):
 		out = [n(x) for n in self.neurons]
