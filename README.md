@@ -1,8 +1,9 @@
-# nn-proof-of-concept
+# dumbgrad - a proper micrograd ripoff
 
-Making this public because convenience despite being incomplete
+After 3 tries finally made a neural network (from scratch more or less)
+and the final iteration copies Karpathy's micrograd, but I did change some 
+things around for the sake of speed.
 
-A pretty bad implementation that is intended for experiments.
+There are still loads of optimisations and improvements to be made
+but i don't know how far will I go with this.
 
-Writing with matrices would be way faster and generally pretier, 
-but defeats the purpose of a proof of concept
