@@ -1,5 +1,5 @@
 import numpy as np
-from engine import Value
+from dumbgrad.engine import Value
 
 class Neuron:
 	def __init__(self, number_inputs, number_outputs):

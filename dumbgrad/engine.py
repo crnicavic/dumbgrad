@@ -1,5 +1,5 @@
 import numpy as np
-from graph import draw_dot
+from dumbgrad.graph import draw_dot
 
 class Value:
 	def __init__(self, data, op=None, children=[], label=''):
