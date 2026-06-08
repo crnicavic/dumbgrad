@@ -1,0 +1,34 @@
+\documentclass[12pt]{article}
+\title{\vspace{-3cm}Predlog projektnog zadatka}
+\author{Ognjen Čavić}
+\date{}
+\pagenumbering{gobble}
+\usepackage{cmsrb}
+\usepackage[OT2,T1]{fontenc}
+\usepackage[serbian]{babel}
+\usepackage{hyperref}
+\begin{document}
+\maketitle
+\hspace{-1cm}Opis zadatka:
+\begin{enumerate}
+        \item Napisati teorijski pregled \textit{LSTM (Long Short-Term Memory)} modela, ciljne funkcije unakrsne entropije (\textit{cross-entropy}) i \textit{ADAM} metode optimizacije.
+        \item Implementirati sledeće funkcionalnosti nad postojećim \textit{dumbgrad} alatom:
+        \begin{itemize}
+          \item Proširen skup podržanih funkcija aktivacije implementacijom funkcija \textbf{sigmoid}, \textbf{ReLU}, \textbf{leaky ReLU}. Trenutna implementacija podržava samo funkciju \textbf{tanh}, što ograničava mogućnosti uvođenja nelinearnosti u model, time i njegovu sposobnost da prepoznaje obrasce.
+          \item Proširen skup podržanih ciljnih funkcija implementacijom funkcije unakrsne entropije i prosečne apsolutne greške.
+          \item Mehanizam regularizacije modela penalisanjem parametara korišćenjem L1 i L2 normi. Cilj je povećati otpornost modela na preterano prilagođavanje (\textbf{overfitting}) na trening skup podataka.
+          \item Paralelizovana obuka modela. Jedan od mogućih načina realizacije jeste podelom podataka za obuku na određen broj podskupova, potom na svakoj niti odvojeno obučiti model, na kraju ih kombinovati uzimanjem proseka.
+          \item \textit{LSTM} model, kao i mogućnost kombinovanja slojeva obične neuronske mreže sa \textit{LSTM} slojevima.
+        \end{itemize}
+        \item Pomoću implementiranih funkcionalnosti kreirati primitivan jezički model zasnovan na predviđanju sledećeg slova, po uzoru na: \url{https://github.com/karpathy/makemore}. Kao bazu koristiti \url{https://huggingface.co/datasets/jerteh/SrpELTeC}, što je zbirka starih srpskih knjiga i sadrži oko 5 miliona reči.
+        \item Napisati adekvatnu dokumentaciju za realizovan kod, kao i detaljno upustvo za upotrebu.
+        \item Napraviti \textit{IPython Notebook (ipynb)} u kojem se demonstrira proces obuke i koriscenje modela.
+\end{enumerate}
+\hspace{-0.5cm}Rezultat ovog rada je:
+\begin{enumerate}
+  \item Dokument sa teorijskim pregledom \textit{LSTM} modela, ciljne funkcije i metode optimizacije.
+  \item Funkcionalni kod na \textit{Github}-u, kao i prateća dokumentacija i uputstvo za upotrebu.
+  \item Izveštaj u formi naučnog rada gde se opisuju rezultati u vidu tačnosti predviđanja fonema
+
+\end{enumerate}
+\end{document}
