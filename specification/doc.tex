@@ -15,9 +15,9 @@
         \item Implementirati sledeće funkcionalnosti nad postojećim \textit{dumbgrad} alatom:
         \begin{itemize}
           \item Proširen skup podržanih funkcija aktivacije implementacijom funkcija \textbf{sigmoid}, \textbf{ReLU}, \textbf{leaky ReLU}. Trenutna implementacija podržava samo funkciju \textbf{tanh}, što ograničava mogućnosti uvođenja nelinearnosti u model, time i njegovu sposobnost da prepoznaje obrasce.
-          \item Proširen skup podržanih ciljnih funkcija implementacijom funkcije unakrsne entropije i prosečne apsolutne greške.
+          \item Proširen skup podržanih ciljnih funkcija implementacijom funkcije unakrsne entropije.
           \item Mehanizam regularizacije modela penalisanjem parametara korišćenjem L1 i L2 normi. Cilj je povećati otpornost modela na preterano prilagođavanje (\textbf{overfitting}) na trening skup podataka.
-          \item Paralelizovana obuka modela. Jedan od mogućih načina realizacije jeste podelom podataka za obuku na određen broj podskupova, potom na svakoj niti odvojeno obučiti model, na kraju ih kombinovati uzimanjem proseka.
+          \item Paralelizovana obuka modela pomoću simuliranog federalnog obučavanja (\textit{simulated federated learning}). Način implementacije jeste podeliti proces obuke na $N$ niti, gde svaka nit ima poseban deo trening skupa podataka i nakon svake iteracije (ili nekoliko iteracija) izračunati prosek svih gradijenata i iskoristiti ih za ažuriranje modela. Ovaj metod federalnog obučavanja se naziva simuliranim jer se model obučava na istoj fizičkoj mašini.
           \item \textit{LSTM} model, kao i mogućnost kombinovanja slojeva obične neuronske mreže sa \textit{LSTM} slojevima.
         \end{itemize}
         \item Pomoću implementiranih funkcionalnosti kreirati primitivan jezički model zasnovan na predviđanju sledećeg slova, po uzoru na: \url{https://github.com/karpathy/makemore}. Kao bazu koristiti \url{https://huggingface.co/datasets/jerteh/SrpELTeC}, što je zbirka starih srpskih knjiga i sadrži oko 5 miliona reči.
