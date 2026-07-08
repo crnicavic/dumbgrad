@@ -2,9 +2,12 @@ import numpy as np
 from dumbgrad.engine import Value
 
 class Neuron:
-    def __init__(self, number_inputs, number_outputs):
+    def __init__(self, number_inputs, number_outputs, rng=None):
         limit = np.sqrt(6 / (number_inputs + number_outputs))
-        self.w = [Value(np.random.uniform(-limit, limit), label='w') for _ in range(number_inputs)]
+        if rng is None:
+            self.w = [Value(np.random.uniform(-limit, limit), label='w') for _ in range(number_inputs)]
+        else:
+            self.w = [Value(rng.uniform(low=-limit, high=limit), label='w') for _ in range(number_inputs)]
         self.b = Value(0,label='b')
 
     def __call__(self, x):
@@ -17,8 +20,8 @@ class Neuron:
 
 
 class Layer:
-    def __init__(self, number_inputs, number_outputs):
-        self.neurons = [Neuron(number_inputs, number_outputs) for _ in range(number_outputs)]
+    def __init__(self, number_inputs, number_outputs, rng=None):
+        self.neurons = [Neuron(number_inputs, number_outputs, rng) for _ in range(number_outputs)]
 
     def __call__(self, x):
         out = [n(x) for n in self.neurons]
@@ -28,9 +31,11 @@ class Layer:
         return [p for n in self.neurons for p in n.parameters()]
 
 class Network:
-    def __init__(self, number_inputs, layer_sizes):
+    def __init__(self, number_inputs, layer_sizes, seed=None):
         sz = [number_inputs] + layer_sizes
-        self.layers = [Layer(sz[i], sz[i+1]) for i in range(len(sz)-1)]
+        rng = np.random.default_rng(seed)
+        self.layers = [Layer(sz[i], sz[i+1], rng) for i in range(len(sz)-1)]
+
 
     def __call__(self, x):
         for l in self.layers:
