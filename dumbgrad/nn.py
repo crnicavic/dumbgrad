@@ -38,6 +38,7 @@ class Network:
 
 
     def __call__(self, x):
+        inputs = [_x if isinstance(_x, Value) else Value(_x) for _x in x]
         for l in self.layers:
             out = l(x)
         return out
