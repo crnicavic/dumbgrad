@@ -14,20 +14,18 @@ def loss(nn):
 def find_gradients_numeric(loss, eps=1e-6):
     topo = loss.make_topo()
     numgrads = {}
-    for node in topo:
-        if node.label != 'w' and node.label != 'b':
-            continue
+    for p in nn.parameters():
         # find the numeric derivative
         prev_loss = loss.data
-        node.data += eps
-        for _node in reversed(topo):
-            _node.update()
-        numgrads[node] = (loss.data - prev_loss) / eps
+        p.data += eps
+        for node in reversed(topo):
+            node.update()
+        numgrads[p] = (loss.data - prev_loss) / eps
 
         # revert
-        node.data -= eps
-        for _node in reversed(topo):
-            _node.update()
+        p.data -= eps
+        for node in reversed(topo):
+            node.update()
     return numgrads
 
 input_count = 2
