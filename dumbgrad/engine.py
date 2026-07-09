@@ -97,6 +97,11 @@ class Value:
 
     # set the gradient of children
     def backprop(self, topo):
+        """
+        Calculate the gradients of the entire topology.
+        Obviously the derivative of the output is 1, and then
+        just propagate the gradient to all of the children
+        """
         self.grad = 1
 
         for node in topo:

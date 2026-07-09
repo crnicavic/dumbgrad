@@ -46,28 +46,21 @@ class Network:
     def parameters(self):
         return [p for l in self.layers for p in l.parameters()]
 
-    def zero_grad(self):
-        for p in self.parameters():
-            p.grad = 0
-
-    def train(self, inputs, outputs, omega1=0.9, omega2=0.99, lr=0.08, epochs=100, eps = 1e-6):
+    def train(self, inputs, outputs, omega1=0.9, omega2=0.99, lr=0.01, epochs=100, eps=1e-6):
         """
-         this builds the entire graph of the network
-         and since i am calculating the loss for all
-         of the inputs at once all that needs to be done
-         is to just call update() for all of the nodes
-         and then backprop
+        this builds the computation graph for loss
+        over the entire dataset. Then calculate the
+        gradients with backprop and use ADAM to
+        update the parameters.
+        Repeat for epochs amount of times.
         """
         y_pred = [self(x) for x in inputs]
         diff = np.subtract(outputs, y_pred)
         loss = np.sum(np.power(diff, 2))
         topo = loss.make_topo()
-        t = 0
-        for _ in range(epochs):
-
-            print(loss)
+        for t in range(1, epochs+1):
+            print(f"loss in epoch {t}: {loss.data}")
             loss.backprop(topo)
-            t += 1
             for p in self.parameters():
                 p.m = omega1 * p.m + (1 - omega1) * p.grad
                 p.v = omega2 * p.v + (1 - omega2) * p.grad**2
@@ -82,7 +75,6 @@ class Network:
         return loss
 
     def test(self, inputs, outputs):
-        # this will need to be optimized
         y_pred = [self(x) for x in inputs]
         correct_count = 0
         for pred, output in zip(y_pred, outputs):
