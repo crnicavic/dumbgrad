@@ -1,13 +1,15 @@
 import numpy as np
 from dumbgrad.engine import Value
+import math
+import random
 
 class Neuron:
     def __init__(self, number_inputs, number_outputs, rng=None):
-        limit = np.sqrt(6 / (number_inputs + number_outputs))
+        limit = math.sqrt(6 / (number_inputs + number_outputs))
         if rng is None:
-            self.w = [Value(np.random.uniform(-limit, limit), label='w') for _ in range(number_inputs)]
+            self.w = [Value(rng.uniform(-limit, limit), label='w') for _ in range(number_inputs)]
         else:
-            self.w = [Value(rng.uniform(low=-limit, high=limit), label='w') for _ in range(number_inputs)]
+            self.w = [Value(rng.uniform(-limit, limit), label='w') for _ in range(number_inputs)]
         self.b = Value(0,label='b')
 
     def __call__(self, x):
@@ -33,7 +35,7 @@ class Layer:
 class Network:
     def __init__(self, number_inputs, layer_sizes, seed=None):
         sz = [number_inputs] + layer_sizes
-        rng = np.random.default_rng(seed)
+        rng = random.Random(seed)
         self.layers = [Layer(sz[i], sz[i+1], rng) for i in range(len(sz)-1)]
 
 
@@ -59,7 +61,7 @@ class Network:
         loss = np.sum(np.power(diff, 2))
         topo = loss.make_topo()
         for t in range(1, epochs+1):
-            print(f"loss in epoch {t}: {loss.data}")
+            #print(f"loss in epoch {t}: {loss.data}")
             loss.backprop(topo)
             for p in self.parameters():
                 p.m = omega1 * p.m + (1 - omega1) * p.grad
@@ -68,7 +70,7 @@ class Network:
                 m_hat = p.m / (1 - omega1 ** t)
                 v_hat = p.v / (1 - omega2 ** t)
 
-                p.data = p.data - lr * m_hat / (np.sqrt(v_hat) + eps)
+                p.data = p.data - lr * m_hat / (math.sqrt(v_hat) + eps)
             for node in reversed(topo):
                 node.update()
 
