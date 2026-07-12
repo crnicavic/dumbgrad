@@ -17,6 +17,8 @@ and when it's time to find the gradient of x, the gradient of a has not
 been calculated yet.
 """
 def case1(x):
+    if not isinstance(x, Value):
+        x = Value(x)
     a = x.tanh()
     a.label = 'a'
     b = a + a
@@ -31,6 +33,8 @@ def case1(x):
 This case only has a few more steps, but the same problem arises
 """
 def case2(x):
+    if not isinstance(x, Value):
+        x = Value(x)
     a = x.tanh()
     a.label = 'a'
 
@@ -51,8 +55,8 @@ def case2(x):
     d.label = 'd'
     return d
 
-def run_case(f, x_val, filename=None):
-    x = Value(x_val)
+def run_case(f, nx, filename=None):
+    x = Value(nx)
     x.label = 'x'
     d = f(x)
 
