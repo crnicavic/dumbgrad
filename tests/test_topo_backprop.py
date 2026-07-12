@@ -51,7 +51,7 @@ def case2(x):
     d.label = 'd'
     return d
 
-def test(f, x_val, filename=None):
+def run_case(f, x_val, filename=None):
     x = Value(x_val)
     x.label = 'x'
     d = f(x)
@@ -59,16 +59,20 @@ def test(f, x_val, filename=None):
     topo = d.make_topo()
     d.backprop(topo)
     numgrad = numeric_grad(f, x).data
-    if abs(x.grad - numgrad) > numgrad/1000:
-        print("something wrong with backprop")
-        for n in topo:
-            print(n.label)
-    print (f"got: {x.grad}\nexpected: {numgrad}")
     if filename is not None:
         g = draw_dot(d)
         g.render(filename=filename, format="png")
 
-print("\nCASE 1 GRADIENT RESULT:")
-test(case1, 0.6)
-print("\nCASE 2 GRADIENT RESULT:")
-test(case2, 0.6)
+    if abs(x.grad - numgrad) > numgrad/1000:
+        print("something wrong with backprop")
+        for n in topo:
+            print(n.label)
+        return False
+    print (f"got: {x.grad}\nexpected: {numgrad}")
+    return True
+
+def test_topo_backprop():
+    print("\nCASE 1 GRADIENT RESULT:")
+    assert run_case(case1, 0.6)
+    print("\nCASE 2 GRADIENT RESULT:")
+    assert run_case(case2, 0.6)

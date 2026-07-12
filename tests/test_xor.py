@@ -1,0 +1,29 @@
+from dumbgrad.engine import Value
+from dumbgrad.nn import Network, Input, Layer
+
+def test_xor():
+    n = Network([
+        Input(2),
+        Layer(5, activation="leaky_relu"),
+        Layer(2)
+    ])
+    n.build(seed=2000)
+
+    x = [
+        [0, 0],
+        [1, 0],
+        [0, 1],
+        [1, 1],
+    ]
+
+    y = [
+        [1, 0],
+        [0, 1],
+        [0, 1],
+        [1, 0]
+    ]
+    n.train(x, y, lr=0.08, epochs=150)
+    y_pred = [n(i) for i in x]
+    accuracy = n.test(x, y)
+
+    assert accuracy >= 0.99
