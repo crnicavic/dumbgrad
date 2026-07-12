@@ -1,4 +1,5 @@
 import numpy as np
+import math
 from dumbgrad.graph import draw_dot
 
 class Value:
@@ -13,11 +14,6 @@ class Value:
         self.v = 0
         for c in children:
             c.parents.append(self)
-
-    def tanh(self):
-        out = Value(np.tanh(self.data), 'tanh', children=[self])
-        return out
-
 
     def __add__(self, number):
         number = number if isinstance(number, Value) else Value(number)
@@ -53,6 +49,23 @@ class Value:
         number = number if isinstance(number, Value) else Value(number)
         if self.data > number.data:
             return True
+
+    def tanh(self):
+        out = Value(math.tanh(self.data), 'tanh', children=[self])
+        return out
+
+    def sigmoid(self):
+        out = Value(1/(1+math.exp(-self.data)), 'sigmoid', children=[self])
+        return out
+
+    def relu(self):
+        out = Value(max(0, self.data), 'relu', children=[self])
+        return out
+
+    def leaky_relu(self):
+        val = self.data if self.data >= 0 else 0.01*self.data
+        out = Value(val, 'leaky_relu', children=[self])
+        return out
 
     """
     Build an array of all the nodes in such a way that
@@ -93,7 +106,14 @@ class Value:
             case '**':
                 self.data = self.children[0].data ** self.children[1].data
             case 'tanh':
-                self.data = np.tanh(self.children[0].data)
+                self.data = math.tanh(self.children[0].data)
+            case 'sigmoid':
+                self.data = 1/(1+math.exp(-self.children[0].data))
+            case 'relu':
+                self.data = max(0, self.children[0].data)
+            case 'leaky_relu':
+                data = self.children[0].data
+                self.data = data if data >= 0 else 0.01 * data
 
     # set the gradient of children
     def backprop(self, topo):
@@ -112,13 +132,20 @@ class Value:
                 case '*':
                     node.children[0].grad += node.children[1].data * node.grad
                     node.children[1].grad += node.children[0].data * node.grad
-                case 'tanh':
-                    node.children[0].grad += (1 - node.data**2) * node.grad
                 case '-':
                     node.children[0].grad += node.grad
                     node.children[1].grad -= node.grad
                 case '**':
                     node.children[0].grad += node.children[1].data * (node.children[0].data ** (node.children[1].data -1)) * node.grad
+                case 'tanh':
+                    node.children[0].grad += (1 - node.data**2) * node.grad
+                case 'sigmoid':
+                    node.children[0].grad += (1 - node.data) * node.data * node.grad
+                case 'relu':
+                    node.children[0].grad += node.grad * (node.data > 0)
+                case 'leaky_relu':
+                    d = 0.01 if node.data < 0 else 1
+                    node.children[0].grad += node.grad * d
 
     def __repr__(self):
         if not self.label:
