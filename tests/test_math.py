@@ -17,12 +17,12 @@ def fn(x, f):
     y = f(x)
     return y
 
-def chained_fn(x, f):
+def chained_fn(x, f, count=100):
     if not isinstance(x, Value):
         x = Value(x)
 
     y = fn(x, f)
-    for _ in range(100):
+    for _ in range(count):
         y = fn(y, f)
     return y
 
@@ -34,24 +34,28 @@ def test_sanity():
     x = Value(0.5)
 
     y1 = x.tanh()
-    y2 = fn(x, Value.tanh)
-    assert y1.data == y2.data
+    y2 = math.tanh(x.data)
+    assert y1.data == y2
 
     y1 = x.sigmoid()
-    y2 = fn(x, Value.sigmoid)
-    assert y1.data == y2.data
+    y2 = 1 / (1 + math.exp(-x.data))
+    assert y1.data == y2
 
     y1 = x.relu()
-    y2 = fn(x, Value.relu)
-    assert y1.data == y2.data
+    y2 = max(0, x.data)
+    assert y1.data == y2
 
     y1 = x.leaky_relu()
-    y2 = fn(x, Value.leaky_relu)
-    assert y1.data == y2.data
+    y2 = 0.01 * x.data if x.data < 0 else x.data
+    assert y1.data == y2
 
     y1 = x.log()
-    y2 = fn(x, Value.log)
-    assert y1.data == y2.data
+    y2 = math.log(x.data)
+    assert y1.data == y2
+
+    y1 = x.exp()
+    y2 = math.exp(x.data)
+    assert y1.data == y2
 
 def test_fn():
     def tanh(x):
@@ -69,6 +73,9 @@ def test_fn():
     def log(x):
         return fn(x, Value.log)
 
+    def exp(x):
+        return fn(x, Value.exp)
+
     x = Value(0.5)
     y = tanh(x)
     y.backprop(y.make_topo())
@@ -97,6 +104,12 @@ def test_fn():
     y = fn(x, Value.log)
     y.backprop(y.make_topo())
     numgrad = numeric_grad(log, x).data
+    assert abs(x.grad - numgrad) < 1e-3
+
+    x.grad = 0
+    y = fn(x, Value.exp)
+    y.backprop(y.make_topo())
+    numgrad = numeric_grad(exp, x).data
     assert abs(x.grad - numgrad) < 1e-3
 
 def test_chained_fn():
@@ -113,7 +126,10 @@ def test_chained_fn():
         return chained_fn(x, Value.leaky_relu)
 
     def log(x):
-        return chained_fn(x, Value.log)
+        return chained_fn(x, Value.log, count=2)
+
+    def exp(x):
+        return chained_fn(x, Value.exp, count=2)
 
     x = Value(0.5)
     y = tanh(x)
@@ -128,24 +144,31 @@ def test_chained_fn():
     assert abs(x.grad - numgrad) < 1e-3
 
     x.grad = 0
-    y = fn(x, Value.relu)
+    y = relu(x)
     y.backprop(y.make_topo())
     numgrad = numeric_grad(relu, x).data
     assert abs(x.grad - numgrad) < 1e-3
 
     x.grad = 0
-    y = fn(x, Value.leaky_relu)
+    y = leaky_relu(x)
     y.backprop(y.make_topo())
     numgrad = numeric_grad(leaky_relu, x).data
     assert abs(x.grad - numgrad) < 1e-3
 
-    x = Value(3)
-    y = fn(x, Value.log)
+    #TODO: test chained log somehow
+    x.data=2000
+    x.grad = 0
+    y = log(x)
     y.backprop(y.make_topo())
     numgrad = numeric_grad(log, x).data
     assert abs(x.grad - numgrad) < 1e-3
 
-    #TODO: test chained log somehow
+    x = Value(0.1)
+    y = exp(x)
+    y.backprop(y.make_topo())
+    numgrad = numeric_grad(exp, x).data
+    print(exp(x), y)
+    assert abs(x.grad - numgrad) < 1e-3
 
 if __name__ == "__main__":
     test_sanity()

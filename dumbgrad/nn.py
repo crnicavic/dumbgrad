@@ -3,18 +3,22 @@ import random
 from dumbgrad.engine import Value
 import math
 import random
+import itertools
+
+
+def flatten(ndarr):
+    return list(itertools.chain.from_iterable(ndarr))
 
 def sum_of_squares(y, y_pred):
     diff = np.subtract(y, y_pred)
     loss = np.sum(np.power(diff, 2))
     return loss
 
-def cross_entropy(y, y_pred):
-    loss = 0
-    for y1, y2 in zip(y, y_pred):
-        if y1 == 1:
-            loss += y1 * y2.log()
-    pass
+def cross_entropy(_y, _y_pred):
+    y = flatten(_y)
+    y_pred = flatten(_y_pred)
+    loss = sum([-y1 * y2.log() if y1 != 0 else 0 for y1, y2 in zip(y, y_pred)])
+    return loss
 
 class Neuron:
     def __init__(self, input_count, output_count, rng=None, activation="tanh"):
@@ -34,6 +38,8 @@ class Neuron:
                 self.activation = Value.relu
             case "leaky_relu":
                 self.activation = Value.leaky_relu
+            case "softmax":
+                self.activation = Value.exp
 
     def __call__(self, x):
         # activation
@@ -54,6 +60,14 @@ class Layer:
 
     def __call__(self, x):
         out = [n(x) for n in self.neurons]
+
+        # this has to be done this way to make the smallest comp graph
+        if self.activation == "softmax":
+            total_act = 0
+            for o in out:
+                total_act += o.data
+            for o in out:
+                o.data = o.data / total_act
         return out
 
     def parameters(self):
@@ -108,7 +122,7 @@ class Network:
         loss = self.loss(outputs, y_pred)
         topo = loss.make_topo()
         for t in range(1, epochs+1):
-            #print(f"loss in epoch {t}: {loss.data}")
+            print(f"loss in epoch {t}: {loss.data}")
             loss.backprop(topo)
             for p in self.parameters():
                 p.m = omega1 * p.m + (1 - omega1) * p.grad

@@ -67,6 +67,10 @@ class Value:
         out = Value(val, 'leaky_relu', children=[self])
         return out
 
+    def exp(self):
+        out = Value(math.exp(self.data), 'exp', children=[self])
+        return out
+
     def log(self):
         out = Value(math.log(self.data), 'log', children=[self])
         return out
@@ -118,6 +122,8 @@ class Value:
             case 'leaky_relu':
                 data = self.children[0].data
                 self.data = data if data >= 0 else 0.01 * data
+            case 'exp':
+                self.data = math.exp(self.children[0].data)
             case 'log':
                 self.data = math.log(self.children[0].data)
 
@@ -152,6 +158,8 @@ class Value:
                 case 'leaky_relu':
                     d = 0.01 if node.data < 0 else 1
                     node.children[0].grad += node.grad * d
+                case 'exp':
+                    node.children[0].grad += node.grad * node.data
                 case 'log':
                     node.children[0].grad += node.grad * (1/node.children[0].data)
 

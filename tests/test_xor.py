@@ -5,9 +5,9 @@ def test_xor():
     n = Network([
         Input(2),
         Layer(5, activation="leaky_relu"),
-        Layer(2)
+        Layer(2, activation="softmax")
     ])
-    n.build(seed=2000)
+    n.build(seed=2000, loss="cross_entropy")
 
     x = [
         [0, 0],
