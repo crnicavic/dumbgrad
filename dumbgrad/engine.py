@@ -67,6 +67,10 @@ class Value:
         out = Value(val, 'leaky_relu', children=[self])
         return out
 
+    def log(self):
+        out = Value(math.log(self.data), 'log', children=[self])
+        return out
+
     """
     Build an array of all the nodes in such a way that
     a node is added once all of it's parents are inside
@@ -114,6 +118,8 @@ class Value:
             case 'leaky_relu':
                 data = self.children[0].data
                 self.data = data if data >= 0 else 0.01 * data
+            case 'log':
+                self.data = math.log(self.children[0].data)
 
     # set the gradient of children
     def backprop(self, topo):
@@ -146,6 +152,8 @@ class Value:
                 case 'leaky_relu':
                     d = 0.01 if node.data < 0 else 1
                     node.children[0].grad += node.grad * d
+                case 'log':
+                    node.children[0].grad += node.grad * (1/node.children[0].data)
 
     def __repr__(self):
         if not self.label:

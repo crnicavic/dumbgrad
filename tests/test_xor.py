@@ -27,3 +27,6 @@ def test_xor():
     accuracy = n.test(x, y)
 
     assert accuracy >= 0.99
+
+if __name__ == "__main__":
+    test_xor()

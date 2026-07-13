@@ -80,3 +80,6 @@ def test_topo_backprop():
     assert run_case(case1, 0.6)
     print("\nCASE 2 GRADIENT RESULT:")
     assert run_case(case2, 0.6)
+
+if __name__ == "__main__":
+    test_topo_backprop()

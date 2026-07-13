@@ -57,3 +57,6 @@ def test_gradients():
     g = draw_dot(loss)
     g.render(filename="loss", format="png")
     assert gradient_cmp(numgrads, topo)
+
+if __name__ == "__main__":
+    test_gradients()

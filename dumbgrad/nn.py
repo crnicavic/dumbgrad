@@ -4,6 +4,18 @@ from dumbgrad.engine import Value
 import math
 import random
 
+def sum_of_squares(y, y_pred):
+    diff = np.subtract(y, y_pred)
+    loss = np.sum(np.power(diff, 2))
+    return loss
+
+def cross_entropy(y, y_pred):
+    loss = 0
+    for y1, y2 in zip(y, y_pred):
+        if y1 == 1:
+            loss += y1 * y2.log()
+    pass
+
 class Neuron:
     def __init__(self, input_count, output_count, rng=None, activation="tanh"):
         limit = np.sqrt(6 / (input_count + output_count))
@@ -58,11 +70,16 @@ class Network:
             raise TypeError("First layer is not an input!")
         self.layers = layers
 
-    def build(self, seed=None):
+    def build(self, seed=None, loss="sum_of_squares"):
         if seed is not None:
             rng = random.Random(seed)
         else:
             rng = None
+
+        if loss == "sum_of_squares" or loss is None:
+            self.loss = sum_of_squares
+        elif loss == "cross_entropy":
+            self.loss = cross_entropy
 
         # dont build the first layer!
         for prev_layer, layer in zip(self.layers, self.layers[1:]):
@@ -88,8 +105,7 @@ class Network:
         Repeat for epochs amount of times.
         """
         y_pred = [self(x) for x in inputs]
-        diff = np.subtract(outputs, y_pred)
-        loss = np.sum(np.power(diff, 2))
+        loss = self.loss(outputs, y_pred)
         topo = loss.make_topo()
         for t in range(1, epochs+1):
             #print(f"loss in epoch {t}: {loss.data}")
