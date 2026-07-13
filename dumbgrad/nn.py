@@ -1,29 +1,44 @@
 import numpy as np
+import random
 from dumbgrad.engine import Value
 import math
 import random
 
 class Neuron:
-    def __init__(self, number_inputs, number_outputs, rng=None):
-        limit = math.sqrt(6 / (number_inputs + number_outputs))
+    def __init__(self, input_count, output_count, rng=None, activation="tanh"):
+        limit = np.sqrt(6 / (input_count + output_count))
         if rng is None:
-            self.w = [Value(rng.uniform(-limit, limit), label='w') for _ in range(number_inputs)]
+            self.w = [Value(np.random.uniform(-limit, limit), label='w') for _ in range(input_count)]
         else:
-            self.w = [Value(rng.uniform(-limit, limit), label='w') for _ in range(number_inputs)]
+            self.w = [Value(rng.uniform(-limit, limit), label='w') for _ in range(input_count)]
         self.b = Value(0,label='b')
+
+        match activation:
+            case "tanh":
+                self.activation = Value.tanh
+            case "sigmoid":
+                self.activation = Value.sigmoid
+            case "relu":
+                self.activation = Value.relu
+            case "leaky_relu":
+                self.activation = Value.leaky_relu
 
     def __call__(self, x):
         # activation
         act = sum((wi * xi) for (wi, xi) in zip(self.w, x)) + self.b
-        return act.tanh()
+        return self.activation(act)
 
     def parameters(self):
         return self.w + [self.b]
 
 
 class Layer:
-    def __init__(self, number_inputs, number_outputs, rng=None):
-        self.neurons = [Neuron(number_inputs, number_outputs, rng) for _ in range(number_outputs)]
+    def __init__(self, size, activation="tanh"):
+        self.size = size
+        self.activation = activation
+
+    def build(self, input_count, rng=None):
+        self.neurons = [Neuron(input_count, self.size, rng, self.activation) for _ in range(self.size)]
 
     def __call__(self, x):
         out = [n(x) for n in self.neurons]
@@ -32,12 +47,28 @@ class Layer:
     def parameters(self):
         return [p for n in self.neurons for p in n.parameters()]
 
-class Network:
-    def __init__(self, number_inputs, layer_sizes, seed=None):
-        sz = [number_inputs] + layer_sizes
-        rng = random.Random(seed)
-        self.layers = [Layer(sz[i], sz[i+1], rng) for i in range(len(sz)-1)]
+# just a placeholder for prettier formating
+class Input:
+    def __init__(self, size):
+        self.size = size
 
+class Network:
+    def __init__(self, layers):
+        if not isinstance(layers[0], Input):
+            raise TypeError("First layer is not an input!")
+        self.layers = layers
+
+    def build(self, seed=None):
+        if seed is not None:
+            rng = random.Random(seed)
+        else:
+            rng = None
+
+        # dont build the first layer!
+        for prev_layer, layer in zip(self.layers, self.layers[1:]):
+            layer.build(prev_layer.size, rng)
+
+        self.layers.pop(0)
 
     def __call__(self, x):
         out = [_x if isinstance(_x, Value) else Value(_x) for _x in x]
@@ -83,4 +114,6 @@ class Network:
             if np.argmax(pred) == np.argmax(output):
                 correct_count += 1
 
-        print("accuracy: ", correct_count / len(outputs))
+        accuracy = correct_count / len(outputs)
+        print("accuracy: ", accuracy)
+        return accuracy
