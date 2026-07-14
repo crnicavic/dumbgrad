@@ -21,8 +21,8 @@ n = Network([
     Input(len(x[0])),
     Layer(30),
     Layer(30),
-    Layer(num_classes, activation="softmax")
+    Layer(num_classes)
 ])
-n.build(seed=2000, loss="cross_entropy")
+n.build(seed=2000)
 n.train(x_train, y_train, epochs=150, lr=0.01)
 n.test(x_test, y_test)

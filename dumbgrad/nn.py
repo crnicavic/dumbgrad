@@ -15,9 +15,24 @@ def sum_of_squares(y, y_pred):
     return loss
 
 def cross_entropy(_y, _y_pred):
+    # potential TODO:
+    """
+    adding a skip condition inside the for loop, such as:
+    if y1 == 0:
+    continue
+
+    seems to break everything, because when constructing the entire graph,
+    only certain nodes get added to the graph. This causes make_topo to not
+    add nodes because not all of the parents get added into the topology
+    currently has to be done like this, which is needlessly slow, but it
+    actually works.
+    """
     y = flatten(_y)
     y_pred = flatten(_y_pred)
-    loss = sum([-y1 * y2.log() if y1 != 0 else 0 for y1, y2 in zip(y, y_pred)])
+    diff = []
+    for y1, y2 in zip(y, y_pred):
+        diff.append(-y1 * y2.log())
+    loss = sum(diff)
     return loss
 
 class Neuron:
@@ -63,11 +78,10 @@ class Layer:
 
         # this has to be done this way to make the smallest comp graph
         if self.activation == "softmax":
-            total_act = 0
-            for o in out:
-                total_act += o.data
-            for o in out:
-                o.data = o.data / total_act
+            total_act = out[0]
+            for o in out[1:]:
+                total_act = total_act + o
+            out = [o * (total_act ** -1) for o in out]
         return out
 
     def parameters(self):
