@@ -75,6 +75,9 @@ class Value:
         out = Value(math.log(self.data), 'log', children=[self])
         return out
 
+    def abs(self):
+        out = Value(math.abs(self.data), 'abs', children[self])
+
     """
     Build an array of all the nodes in such a way that
     a node is added once all of it's parents are inside
@@ -126,6 +129,8 @@ class Value:
                 self.data = math.exp(self.children[0].data)
             case 'log':
                 self.data = math.log(self.children[0].data)
+            case 'abs':
+                self.data = math.abs(self.children[0].data)
 
     # set the gradient of children
     def backprop(self, topo):
@@ -162,6 +167,14 @@ class Value:
                     node.children[0].grad += node.grad * node.data
                 case 'log':
                     node.children[0].grad += node.grad * (1/node.children[0].data)
+                case 'abs':
+                    if node.children[0].data > 0:
+                        d = 1
+                    elif node.children[0].data < 0:
+                        d = -1
+                    else:
+                        d = 0
+                    node.children[0].grad += node.grad * d
 
     def __repr__(self):
         if not self.label:
