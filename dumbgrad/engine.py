@@ -100,7 +100,7 @@ class Value:
                 topo.append(v)
 
         build(self)
-        return topo
+        return topo[::-1]
 
     def update(self):
         self.grad = 0
