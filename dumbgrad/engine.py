@@ -86,31 +86,20 @@ class Value:
         out = Value(abs(self.data), 'abs', children=[self])
         return out
 
-    """
-    Build an array of all the nodes in such a way that
-    a node is added once all of it's parents are inside
-    the topo
-    """
     def make_topo(self):
+
         topo = []
         visited = set()
         stack = [self]
 
-        while stack:
-            node = stack.pop()
-            if node in visited:
-                continue
+        def build(v):
+            if v not in visited:
+                visited.add(v)
+                for child in v.children:
+                    build(child)
+                topo.append(v)
 
-            node_ready = True
-            for parent_node in node.parents:
-                if parent_node not in visited:
-                    node_ready = False
-
-            if node_ready:
-                visited.add(node)
-                topo.append(node)
-                stack.extend(node.children)
-
+        build(self)
         return topo
 
     def update(self):

@@ -23,7 +23,6 @@ def test_xor():
         [1, 0]
     ]
     n.train(x, y, lr=0.08, epochs=150)
-    y_pred = [n(i) for i in x]
     accuracy = n.test(x, y)
 
     assert accuracy >= 0.99
