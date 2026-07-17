@@ -51,6 +51,13 @@ def l2_regularization(weights):
 def none_regularization(weights):
     return 0
 
+def argmax(arr):
+    m = 0
+    for i in range(1, len(arr)):
+        if arr[i] > arr[m]:
+            m = i
+    return m
+
 class Neuron:
     def __init__(self, input_count, output_count, rng=None, activation="tanh"):
         limit = math.sqrt(6 / (input_count + output_count))
@@ -182,13 +189,6 @@ class Network:
         return loss
 
     def test(self, inputs, outputs):
-        def argmax(arr):
-            m = 0
-            for i in range(len(arr[1:])):
-                if arr[i] > arr[m]:
-                    m = i
-            return m
-
         y_pred = [self(x) for x in inputs]
         correct_count = 0
         for pred, output in zip(y_pred, outputs):

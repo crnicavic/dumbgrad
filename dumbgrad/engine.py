@@ -49,6 +49,13 @@ class Value:
         number = number if isinstance(number, Value) else Value(number)
         if self.data > number.data:
             return True
+        return False
+
+    def __lt__(self, number):
+        number = number if isinstance(number, Value) else Value(number)
+        if self.data < number.data:
+            return True
+        return False
 
     def tanh(self):
         out = Value(math.tanh(self.data), 'tanh', children=[self])
@@ -77,6 +84,7 @@ class Value:
 
     def abs(self):
         out = Value(abs(self.data), 'abs', children=[self])
+        return out
 
     """
     Build an array of all the nodes in such a way that
