@@ -76,7 +76,7 @@ class Value:
         return out
 
     def abs(self):
-        out = Value(math.abs(self.data), 'abs', children[self])
+        out = Value(abs(self.data), 'abs', children=[self])
 
     """
     Build an array of all the nodes in such a way that
@@ -130,7 +130,7 @@ class Value:
             case 'log':
                 self.data = math.log(self.children[0].data)
             case 'abs':
-                self.data = math.abs(self.children[0].data)
+                self.data = abs(self.children[0].data)
 
     # set the gradient of children
     def backprop(self, topo):

@@ -1,4 +1,3 @@
-import numpy as np
 import random
 from dumbgrad.engine import Value
 import math
@@ -48,6 +47,9 @@ def l2_regularization(weights):
         total += w ** 2
 
     return total * 0.01
+
+def none_regularization(weights):
+    return 0
 
 class Neuron:
     def __init__(self, input_count, output_count, rng=None, activation="tanh"):
@@ -137,6 +139,8 @@ class Network:
             self.regularization = l1_regularization
         elif regularization == "l2":
             self.regularization = l2_regularization
+        else:
+            self.regularization = none_regularization
 
         if loss == "sum_of_squares" or loss is None:
             self.loss = sum_of_squares
@@ -145,7 +149,7 @@ class Network:
 
         # dont build the first layer!
         for prev_layer, layer in zip(self.layers, self.layers[1:]):
-            layer.build(prev_layer.size)
+            layer.build(prev_layer.size, rng)
 
         self.layers.pop(0)
 
@@ -158,9 +162,7 @@ class Network:
         Repeat for epochs amount of times.
         """
         y_pred = [self(x) for x in inputs]
-        loss = self.loss(outputs, y_pred)
-        if self.regularization is not None:
-            loss += l2_regularization(self.weights())
+        loss = self.loss(outputs, y_pred) + self.regularization(self.weights())
 
         topo = loss.make_topo()
         for t in range(1, epochs+1):
@@ -185,8 +187,8 @@ class Network:
             for i in range(len(arr[1:])):
                 if arr[i] > arr[m]:
                     m = i
+            return m
 
-            return i
         y_pred = [self(x) for x in inputs]
         correct_count = 0
         for pred, output in zip(y_pred, outputs):

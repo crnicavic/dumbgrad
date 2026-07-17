@@ -7,7 +7,7 @@ def test_xor():
         Layer(5, activation="leaky_relu"),
         Layer(2, activation="softmax")
     ])
-    n.build(seed=2000, loss="cross_entropy", regularization="l1")
+    n.build(seed=2000, loss="cross_entropy")
 
     x = [
         [0, 0],
