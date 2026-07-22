@@ -1,6 +1,6 @@
+# Test for topology build of neural network
 from dumbgrad.engine import Value
 from dumbgrad.nn import Network, Input, Layer
-
 
 def test_topo_regression():
     """

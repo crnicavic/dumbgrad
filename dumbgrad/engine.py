@@ -1,5 +1,6 @@
 import numpy as np
 import math
+from collections import namedtuple
 from dumbgrad.graph import draw_dot
 
 class Value:
@@ -87,19 +88,40 @@ class Value:
         return out
 
     def make_topo(self):
+        """
+        Function that topologically sorts all of the nodes
+        used to build the Value object
+
+        The way it works is that it "simulates recursion"
+
+        A stack consisting of entries that contain the current
+        value node, and the index of the child that is to be
+        inserted into the stack. Another way of looking at it is
+        the number of children that are in the stack.
+
+        The class is just that, a container for a value object and
+        the child index.
+        """
+        class stack_entry:
+            def __init__(self, node):
+                self.node = node
+                self.i = 0
 
         topo = []
-        visited = set()
-        stack = [self]
+        visited = {self}
+        stack = [stack_entry(self)]
+        while stack:
+            node, i = stack[-1].node, stack[-1].i
+            if i < len(node.children):
+                stack[-1].i += 1
+                child = node.children[i]
+                if child not in visited:
+                    visited.add(child)
+                    stack.append(stack_entry(child))
+            else:
+                topo.append(node)
+                stack.pop()
 
-        def build(v):
-            if v not in visited:
-                visited.add(v)
-                for child in v.children:
-                    build(child)
-                topo.append(v)
-
-        build(self)
         return topo[::-1]
 
     def update(self):
