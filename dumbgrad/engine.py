@@ -101,6 +101,11 @@ class Value:
 
         The class is just that, a container for a value object and
         the child index.
+
+        The loop works as follows:
+        - Get the last entry of the stack
+        - Check if all of the children are in the STACK
+            - if not - add the first of the children to the stack and increment how many children are in the stack
         """
         class stack_entry:
             def __init__(self, node):
