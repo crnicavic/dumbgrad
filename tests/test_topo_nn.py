@@ -92,7 +92,35 @@ def test_topo_regression_sparse():
     # make pytest happy
     assert matches == len(params)
 
+def test_topo_sanity():
+    input_size = 5
+    nn = Network([
+        Input(input_size),
+        Layer(5),
+        Layer(5, activation="sigmoid"),
+        Layer(5, activation="relu"),
+        Layer(5, activation="leaky_relu"),
+        Layer(5, activation="sigmoid"),
+        Layer(5, activation="softmax")
+    ])
+
+    nn.build(seed=2000)
+
+    x = [[0 for _i in range(input_size)] for _j in range(2**input_size)]
+    for i in range(2**input_size):
+        for j in range(input_size):
+            x[i][j] = (i >> j) & 1
+
+
+    loss = sum(sum(nn(_x)) for _x in x)
+    topo = loss.make_topo()
+    visited = set()
+    for i, n in enumerate(topo):
+        for c in n.children:
+            assert c in visited
+        visited.add(n)
 
 if __name__ == "__main__":
+    test_topo_sanity()
     test_topo_regression()
     test_topo_regression_sparse()

@@ -1,20 +1,16 @@
 import numpy as np
 import math
 from collections import namedtuple
-from dumbgrad.graph import draw_dot
 
 class Value:
     def __init__(self, data, op=None, children=[], label=''):
         self.data = data
         self.grad = 0 # what is the derrivative of the output by this variable
-        self.parents = []
         self.children = children
         self.op = op
         self.label = label
         self.m = 0
         self.v = 0
-        for c in children:
-            c.parents.append(self)
 
     def __add__(self, number):
         number = number if isinstance(number, Value) else Value(number)
@@ -90,7 +86,9 @@ class Value:
     def make_topo(self):
         """
         Function that topologically sorts all of the nodes
-        used to build the Value object
+        used to build the Value object. In other words,
+        in order to add a node to the topology, all of it's
+        children need to be added into it first.
 
         The way it works is that it "simulates recursion"
 
@@ -105,7 +103,8 @@ class Value:
         The loop works as follows:
         - Get the last entry of the stack
         - Check if all of the children are in the STACK
-            - if not - add the first of the children to the stack and increment how many children are in the stack
+            - if not - add the first of the children to
+            the stack and increment how many children are in the stack
         """
         class stack_entry:
             def __init__(self, node):
@@ -127,7 +126,7 @@ class Value:
                 topo.append(node)
                 stack.pop()
 
-        return topo[::-1]
+        return topo
 
     def update(self):
         self.grad = 0
@@ -165,7 +164,7 @@ class Value:
         """
         self.grad = 1
 
-        for node in topo:
+        for node in reversed(topo):
             match node.op:
                 case '+':
                     node.children[0].grad += node.grad

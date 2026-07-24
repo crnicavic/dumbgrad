@@ -1,11 +1,8 @@
-import random
 from dumbgrad.engine import Value
+from dumbgrad.utils import *
 import math
 import random
-import itertools
 
-def flatten(ndarr):
-    return list(itertools.chain.from_iterable(ndarr))
 
 def sum_of_squares(_y, _y_pred):
     y = flatten(_y)
@@ -15,22 +12,12 @@ def sum_of_squares(_y, _y_pred):
     return loss
 
 def cross_entropy(_y, _y_pred):
-    # potential TODO:
-    """
-    adding a skip condition inside the for loop, such as:
-    if y1 == 0:
-    continue
-
-    seems to break everything, because when constructing the entire graph,
-    only certain nodes get added to the graph. This causes make_topo to not
-    add nodes because not all of the parents get added into the topology
-    currently has to be done like this, which is needlessly slow, but it
-    actually works.
-    """
     y = flatten(_y)
     y_pred = flatten(_y_pred)
     ent = []
     for y1, y2 in zip(y, y_pred):
+        if y1 == 0:
+            continue
         ent.append(-y1 * y2.log())
     loss = sum(ent)
     return loss
@@ -51,12 +38,6 @@ def l2_regularization(weights):
 def none_regularization(weights):
     return 0
 
-def argmax(arr):
-    m = 0
-    for i in range(1, len(arr)):
-        if arr[i] > arr[m]:
-            m = i
-    return m
 
 class Neuron:
     def __init__(self, input_count, output_count, rng=None, activation="tanh"):
@@ -183,7 +164,7 @@ class Network:
                 v_hat = p.v / (1 - omega2 ** t)
 
                 p.data = p.data - lr * m_hat / (math.sqrt(v_hat) + eps)
-            for node in reversed(topo):
+            for node in topo:
                 node.update()
 
         return loss
@@ -197,4 +178,10 @@ class Network:
 
         accuracy = correct_count / len(outputs)
         print(f"accuracy on {len(outputs)} test samples: {accuracy}")
+        out_uniq = unique(from_categorical(outputs))
+        pred_uniq = unique(from_categorical(y_pred))
+        print("Model classification stats:")
+        for k in out_uniq:
+            print(f"\tclass {k} expected: {out_uniq[k]}, got: {pred_uniq[k]}")
+
         return accuracy

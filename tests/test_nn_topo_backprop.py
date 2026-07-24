@@ -3,6 +3,14 @@ from dumbgrad.engine import Value
 from dumbgrad.nn import Input, Layer, Network
 from dumbgrad.graph import draw_dot
 
+"""
+This test compares the numeric approximation of a derivative
+and the gradient calculated with backprop.
+
+While this method is not very accurate, it is correct enough
+to test the algorithm.
+"""
+
 def numeric_grad(f, x, eps=1e-6):
     return (f(x + eps) - f(x)) * (1/eps)
 
@@ -13,19 +21,27 @@ def make_loss(nn):
     return loss
 
 def find_gradients_numeric(loss, nn, eps=1e-6):
+    """
+    This iterates through all of the parameters and
+    just nudges them by eps. Then it iterates through
+    the topology and runs the update method.
+    Then it is subtracted from the original value and
+    divided by eps.
+    That result is put into the numgrad dictionary
+    """
     topo = loss.make_topo()
     numgrads = {}
     for p in nn.parameters():
         # find the numeric derivative
         prev_loss = loss.data
         p.data += eps
-        for node in reversed(topo):
+        for node in topo:
             node.update()
         numgrads[p] = (loss.data - prev_loss) / eps
 
         # revert
         p.data -= eps
-        for node in reversed(topo):
+        for node in topo:
             node.update()
     return numgrads
 
