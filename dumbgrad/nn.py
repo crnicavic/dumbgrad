@@ -3,7 +3,6 @@ from dumbgrad.utils import *
 import math
 import random
 
-
 def sum_of_squares(_y, _y_pred):
     y = flatten(_y)
     y_pred = flatten(_y_pred)
@@ -38,6 +37,12 @@ def l2_regularization(weights):
 def none_regularization(weights):
     return 0
 
+class Parameter(Value):
+    __slots__ = ('m', 'v')
+    def __init__(self, data, op=None, children=[], label=''):
+        super().__init__(data, op, children, label)
+        self.m = 0
+        self.v = 0
 
 class Neuron:
     def __init__(self, input_count, output_count, rng=None, activation="tanh"):
