@@ -1,4 +1,4 @@
-from dumbgrad.engine import Value
+from dumbgrad.engine import Value, Parameter
 from dumbgrad.utils import *
 import math
 import random
@@ -43,10 +43,10 @@ class Neuron:
     def __init__(self, input_count, output_count, rng=None, activation="tanh"):
         limit = math.sqrt(6 / (input_count + output_count))
         if rng is None:
-            self.w = [Value(random.uniform(-limit, limit), label='w') for _ in range(input_count)]
+            self.w = [Parameter(random.uniform(-limit, limit), label='w') for _ in range(input_count)]
         else:
-            self.w = [Value(rng.uniform(-limit, limit), label='w') for _ in range(input_count)]
-        self.b = Value(0,label='b')
+            self.w = [Parameter(rng.uniform(-limit, limit), label='w') for _ in range(input_count)]
+        self.b = Parameter(0,label='b')
 
         match activation:
             case "tanh":
@@ -81,7 +81,8 @@ class Layer:
             total_act = out[0]
             for o in out[1:]:
                 total_act += o
-            out = [o * (total_act ** -1) for o in out]
+            inv_total = total_act ** -1
+            out = [o * inv_total for o in out]
         return out
 
     def parameters(self):

@@ -3,14 +3,13 @@ import math
 from collections import namedtuple
 
 class Value:
+    __slots__ = ('data', 'grad', 'children', 'op', 'label')
     def __init__(self, data, op=None, children=[], label=''):
         self.data = data
         self.grad = 0 # what is the derrivative of the output by this variable
         self.children = children
         self.op = op
         self.label = label
-        self.m = 0
-        self.v = 0
 
     def __add__(self, number):
         number = number if isinstance(number, Value) else Value(number)
@@ -204,3 +203,11 @@ class Value:
             return f"data = {self.data}, gradient = {self.grad}, op = {self.op}"
         else:
             return f"label = {self.label}, data = {self.data}, gradient = {self.grad}, op = {self.op}"
+
+
+class Parameter(Value):
+    __slots__ = ('m', 'v')
+    def __init__(self, data, op=None, children=[], label=''):
+        super().__init__(data, op, children, label)
+        self.m = 0
+        self.v = 0
