@@ -1,7 +1,8 @@
 from dumbgrad.nn import argmax
 import random
 
-if __name__ == "__main__":
+
+def test_argmax():
     arr_size = 100
     arr = [0] * arr_size
     for i, a in enumerate(arr):
@@ -19,3 +20,6 @@ if __name__ == "__main__":
         if arr[argmax(arr)] != max(arr):
             print(f"argmax broken!\n, max is at {i}, but got {argmax(arr)}")
             break
+
+if __name__ == "__main__":
+    test_argmax()
