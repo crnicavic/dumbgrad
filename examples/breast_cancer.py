@@ -1,10 +1,11 @@
 from dumbgrad.engine import Value
 from dumbgrad.nn import Network, Input, Layer, flatten
+import numpy as np
 from dumbgrad.utils import *
 from sklearn.model_selection import train_test_split
-from sklearn.datasets import load_iris
+from sklearn.datasets import load_breast_cancer
 
-dataset = load_iris()
+dataset = load_breast_cancer()
 x, y = dataset.data.tolist(), dataset.target.tolist()
 x = normalize(x, per_column=True)
 num_classes = len(unique(y))
@@ -13,6 +14,7 @@ x_train, x_test, y_train, y_test = train_test_split(x, y, test_size=0.3, shuffle
 
 n = Network([
     Input(len(x[0])),
+    Layer(30),
     Layer(30),
     Layer(num_classes, activation="softmax")
 ])

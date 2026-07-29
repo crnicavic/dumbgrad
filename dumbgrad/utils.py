@@ -22,12 +22,19 @@ def from_categorical(y):
     return regular
     
 
-def normalize(x):
-    x_ = flatten(x)
-    min_, max_ = min(x_), max(x_)
-    for i in range(len(x)):
-        for j in range(len(x[i])):
-            x[i][j] = (x[i][j] - min_) / (max_ - min_)
+def normalize(x, per_column=False):
+    scale = lambda val, lo, hi: (val - lo) / (hi - lo)
+    if per_column == True:
+        # list(zip(*x)) inverts the rows and columns
+        # in other words it gives the transpose
+        transposed = list(zip(*x))
+        los = [min(col) for col in transposed]
+        his = [max(col) for col in transposed]
+        return [[scale(x_, lo, hi) for x_, lo, hi in zip(row, los, his)] for row in x]
+    else:
+        lo = min(flatten(x))
+        hi = max(flatten(x))
+        return [[scale(x_, lo, hi) for x_ in row] for row in x]
 
 def flatten(ndarr):
     return list(itertools.chain.from_iterable(ndarr))
