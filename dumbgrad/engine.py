@@ -127,34 +127,45 @@ class Value:
 
         return topo
 
-    def update(self):
-        self.grad = 0
-        match self.op:
-            case '+':
-                self.data = self.children[0].data + self.children[1].data
-            case '-':
-                self.data = self.children[0].data - self.children[1].data
-            case '*':
-                self.data = self.children[0].data * self.children[1].data
-            case '**':
-                self.data = self.children[0].data ** self.children[1].data
-            case 'tanh':
-                self.data = math.tanh(self.children[0].data)
-            case 'sigmoid':
-                self.data = 1/(1+math.exp(-self.children[0].data))
-            case 'relu':
-                self.data = max(0, self.children[0].data)
-            case 'leaky_relu':
-                data = self.children[0].data
-                self.data = data if data >= 0 else 0.01 * data
-            case 'exp':
-                self.data = math.exp(self.children[0].data)
-            case 'log':
-                self.data = math.log(self.children[0].data)
-            case 'abs':
-                self.data = abs(self.children[0].data)
+    def recompute(self, topo):
+        """
+        Iterate through a topology and recalculate
+        the values of the nodes.
 
-    # set the gradient of children
+        This is useful if any of the children of a
+        node would be changed.
+
+        Used mainly in the training method of the
+        Network class to avoid having to make a new
+        graph after updating the parameters.
+        """
+        for node in topo:
+            node.grad = 0
+            match node.op:
+                case '+':
+                    node.data = node.children[0].data + node.children[1].data
+                case '-':
+                    node.data = node.children[0].data - node.children[1].data
+                case '*':
+                    node.data = node.children[0].data * node.children[1].data
+                case '**':
+                    node.data = node.children[0].data ** node.children[1].data
+                case 'tanh':
+                    node.data = math.tanh(node.children[0].data)
+                case 'sigmoid':
+                    node.data = 1/(1+math.exp(-node.children[0].data))
+                case 'relu':
+                    node.data = max(0, node.children[0].data)
+                case 'leaky_relu':
+                    data = node.children[0].data
+                    node.data = data if data >= 0 else 0.01 * data
+                case 'exp':
+                    node.data = math.exp(node.children[0].data)
+                case 'log':
+                    node.data = math.log(node.children[0].data)
+                case 'abs':
+                    node.data = abs(node.children[0].data)
+
     def backprop(self, topo):
         """
         Calculate the gradients of the entire topology.
