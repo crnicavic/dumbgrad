@@ -35,14 +35,12 @@ def find_gradients_numeric(loss, nn, eps=1e-6):
         # find the numeric derivative
         prev_loss = loss.data
         p.data += eps
-        for node in topo:
-            node.update()
+        loss.recompute(topo)
         numgrads[p] = (loss.data - prev_loss) / eps
 
         # revert
         p.data -= eps
-        for node in topo:
-            node.update()
+        loss.recompute(topo)
     return numgrads
 
 def gradient_cmp(numgrads, topo):
