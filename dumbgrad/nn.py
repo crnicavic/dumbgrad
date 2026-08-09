@@ -53,15 +53,14 @@ class L1Regularization(Regularization):
         total = weights[0].abs()
         for w in weights[1:]:
             total += w.abs()
-        return total * 0.01
+        return total * self.alpha
 
 class L2Regularization(Regularization):
     def __call__(self, weights):
         total = weights[0] ** 2
         for w in weights[1:]:
             total += w ** 2
-
-        return total * 0.01
+        return total * self.alpha
 
 class NoRegularization(Regularization):
     def __call__(self, weights):
