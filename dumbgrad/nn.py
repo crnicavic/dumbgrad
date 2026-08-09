@@ -147,28 +147,47 @@ class Network:
 
         self.layers.pop(0)
 
-    def train(self, inputs, outputs, omega1=0.9, omega2=0.99, lr=0.01, epochs=100, eps=1e-6):
-        batch_size = 2
+    def train(self, inputs, outputs, batch_size=1,omega1=0.9, omega2=0.99, lr=0.01, epochs=100, eps=1e-6):
+        def batch_split(inputs, outputs, batch_size):
+            batches = []
+            for start in range(0, len(outputs), batch_size):
+                stop = start + batch_size
+                batch = (list(inputs[start:stop]), list(outputs[start:stop]))
+                batches.append(batch)
+            return batches
+
+        if len(inputs) != len(outputs):
+            raise ValueError("Input and output size mismatch!")
+
         if batch_size < 1:
-            batch_size = 1
-        x = [[Value(col) for col in row] for row in inputs[:batch_size]]
-        y = [[Value(col) for col in row] for row in outputs[:batch_size]]
+            raise ValueError("Batch size can't be less than 1")
+        elif batch_size > len(outputs):
+            raise ValueError("Batch size can't be greater than dataset size")
+        elif len(outputs) % batch_size != 0:
+            raise ValueError(f"Batches aren't even! {len(outputs)}/{batch_size}")
+
+        # build computation graph for the first batch
+        batches = batch_split(inputs, outputs, batch_size)
+        batch_in, batch_out = batches[0]
+        x = [[Value(col) for col in row] for row in batch_in]
+        y = [[Value(col) for col in row] for row in batch_out]
         y_pred = [self(xi) for xi in x]
         loss = self.loss(y, y_pred) + self.regularization(self.weights())
         topo = loss.make_topo()
+
         for t in range(1, epochs+1):
             epoch_loss = 0
-            for batch_start in range(0, len(outputs), batch_size):
-                batch_stop = batch_start + batch_size
-                for i in range(batch_start, batch_stop):
-                    for j in range(len(inputs[i])):
-                        x[i%batch_size][j].data = inputs[i][j]
-                    for j in range(len(outputs[i])):
-                        y[i%batch_size][j].data = outputs[i][j]
+            for batch_in, batch_out in batches:
+                # update the graph with values from new batch
+                for a, b in zip(flatten(x), flatten(batch_in)):
+                    a.data = b
+                for a, b in zip(flatten(y), flatten(batch_out)):
+                    a.data = b
                 for node in topo:
                     node.update()
                 epoch_loss += loss.data
                 loss.backprop(topo)
+                # optimize the parameters (this should be a separate method)
                 for p in self.parameters():
                     p.m = omega1 * p.m + (1 - omega1) * p.grad
                     p.v = omega2 * p.v + (1 - omega2) * p.grad**2
