@@ -21,28 +21,51 @@ def cross_entropy(_y, _y_pred):
     loss = sum(ent)
     return loss
 
-def l1_regularization(weights):
-    total = weights[0].abs()
-    for w in weights[1:]:
-        total += w.abs()
-    return total * 0.01
-
-def l2_regularization(weights):
-    total = weights[0] ** 2
-    for w in weights[1:]:
-        total += w ** 2
-
-    return total * 0.01
-
-def none_regularization(weights):
-    return 0
-
 class Parameter(Value):
     __slots__ = ('m', 'v')
     def __init__(self, data, op=None, children=[], label=''):
         super().__init__(data, op, children, label)
         self.m = 0
         self.v = 0
+
+class Optimizer:
+    def __init__(self, omega1=0.9, omega2=0.99, lr=0.01, eps=1e-6):
+        self.omega1 = omega1
+        self.omega2 = omega2
+        self.lr = lr
+        self.eps = eps
+
+    def __call__(self, p, t):
+        p.m = self.omega1 * p.m + (1 - self.omega1) * p.grad
+        p.v = self.omega2 * p.v + (1 - self.omega2) * p.grad**2
+
+        m_hat = p.m / (1 - self.omega1 ** t)
+        v_hat = p.v / (1 - self.omega2 ** t)
+
+        p.data = p.data - self.lr * m_hat / (math.sqrt(v_hat) + self.eps)
+
+class Regularization():
+    def __init__(self, alpha=0.01):
+        self.alpha = 0.01
+
+class L1Regularization(Regularization):
+    def __call__(self, weights):
+        total = weights[0].abs()
+        for w in weights[1:]:
+            total += w.abs()
+        return total * 0.01
+
+class L2Regularization(Regularization):
+    def __call__(self, weights):
+        total = weights[0] ** 2
+        for w in weights[1:]:
+            total += w ** 2
+
+        return total * 0.01
+
+class NoRegularization(Regularization):
+    def __call__(self, weights):
+        return 0
 
 class Neuron:
     def __init__(self, input_count, output_count, rng=None, activation="tanh"):
@@ -106,6 +129,7 @@ class Input:
 
 class Network:
     def __init__(self, layers):
+        #
         if not isinstance(layers[0], Input):
             raise TypeError("First layer is not an input!")
         self.layers = layers
@@ -123,23 +147,30 @@ class Network:
     def weights(self):
         return [w for l in self.layers for w in l.weights()]
 
-    def build(self, seed=None, loss="sum_of_squares", regularization=None):
+    def build(self,
+              seed=None,
+              loss="sum_of_squares",
+              optimizer=None,
+              regularization=None):
         if seed is not None:
             rng = random.Random(seed)
         else:
             rng = None
 
-        if regularization == "l1":
-            self.regularization = l1_regularization
-        elif regularization == "l2":
-            self.regularization = l2_regularization
-        else:
-            self.regularization = none_regularization
-
         if loss == "sum_of_squares" or loss is None:
             self.loss = sum_of_squares
         elif loss == "cross_entropy":
             self.loss = cross_entropy
+
+        if optimizer is None:
+            self.optimizer = Optimizer()
+        else:
+            self.optimizer = optimizer
+
+        if regularization is None:
+            self.regularization = NoRegularization()
+        else:
+            self.regularization = regularization
 
         # dont build the first layer!
         for prev_layer, layer in zip(self.layers, self.layers[1:]):
@@ -147,7 +178,7 @@ class Network:
 
         self.layers.pop(0)
 
-    def train(self, inputs, outputs, batch_size=1,omega1=0.9, omega2=0.99, lr=0.01, epochs=100, eps=1e-6):
+    def train(self, inputs, outputs, batch_size=1, epochs=100):
         def batch_split(inputs, outputs, batch_size):
             batches = []
             for start in range(0, len(outputs), batch_size):
@@ -169,6 +200,7 @@ class Network:
         # build computation graph for the first batch
         batches = batch_split(inputs, outputs, batch_size)
         batch_in, batch_out = batches[0]
+        # get "handles" to the inputs and outputs
         x = [[Value(col) for col in row] for row in batch_in]
         y = [[Value(col) for col in row] for row in batch_out]
         y_pred = [self(xi) for xi in x]
@@ -183,19 +215,11 @@ class Network:
                     a.data = b
                 for a, b in zip(flatten(y), flatten(batch_out)):
                     a.data = b
-                for node in topo:
-                    node.update()
+                loss.recompute(topo)
                 epoch_loss += loss.data
                 loss.backprop(topo)
-                # optimize the parameters (this should be a separate method)
                 for p in self.parameters():
-                    p.m = omega1 * p.m + (1 - omega1) * p.grad
-                    p.v = omega2 * p.v + (1 - omega2) * p.grad**2
-
-                    m_hat = p.m / (1 - omega1 ** t)
-                    v_hat = p.v / (1 - omega2 ** t)
-
-                    p.data = p.data - lr * m_hat / (math.sqrt(v_hat) + eps)
+                    self.optimizer(p, t)
 
             print(f"loss in epoch {t}: {epoch_loss}")
 

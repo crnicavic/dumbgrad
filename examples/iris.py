@@ -17,5 +17,5 @@ n = Network([
     Layer(num_classes, activation="softmax")
 ])
 n.build(seed=0, loss="cross_entropy", regularization="l2")
-n.train(x_train, y_train, epochs=150, lr=0.01)
+n.train(x_train, y_train, epochs=150)
 n.test(x_test, y_test)
