@@ -1,5 +1,5 @@
 from dumbgrad.engine import Value
-from dumbgrad.nn import Network, Input, Layer, flatten
+from dumbgrad.nn import *
 from dumbgrad.utils import *
 from sklearn.model_selection import train_test_split
 from sklearn.datasets import load_iris
@@ -16,6 +16,7 @@ n = Network([
     Layer(30),
     Layer(num_classes, activation="softmax")
 ])
-n.build(seed=0, loss="cross_entropy", regularization="l2")
+reg = L2Regularization()
+n.build(seed=0, loss="cross_entropy", regularization=reg)
 n.train(x_train, y_train, epochs=150)
 n.test(x_test, y_test)

@@ -1,6 +1,5 @@
 from dumbgrad.engine import Value
 from dumbgrad.nn import *
-import numpy as np
 from dumbgrad.utils import *
 from sklearn.model_selection import train_test_split
 from sklearn.datasets import load_digits
@@ -20,5 +19,5 @@ n = Network([
 ])
 reg = L2Regularization()
 n.build(seed=0, loss="cross_entropy", regularization=reg)
-n.train(x_train, y_train, batch_size=419, epochs=15)
+n.train(x_train, y_train, batch_size=3, epochs=15)
 n.test(x_test, y_test)
