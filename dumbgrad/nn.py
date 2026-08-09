@@ -17,7 +17,7 @@ def cross_entropy(_y, _y_pred):
     for y1, y2 in zip(y, y_pred):
         if y1 == 0:
             continue
-        ent.append(-y1 * y2.log())
+        ent.append(-1 * y1 * y2.log())
     loss = sum(ent)
     return loss
 
@@ -148,32 +148,37 @@ class Network:
         self.layers.pop(0)
 
     def train(self, inputs, outputs, omega1=0.9, omega2=0.99, lr=0.01, epochs=100, eps=1e-6):
-        """
-        this builds the computation graph for loss
-        over the entire dataset. Then calculate the
-        gradients with backprop and use ADAM to
-        update the parameters.
-        Repeat for epochs amount of times.
-        """
-        y_pred = [self(x) for x in inputs]
-        loss = self.loss(outputs, y_pred) + self.regularization(self.weights())
-
+        batch_size = 2
+        if batch_size < 1:
+            batch_size = 1
+        x = [[Value(col) for col in row] for row in inputs[:batch_size]]
+        y = [[Value(col) for col in row] for row in outputs[:batch_size]]
+        y_pred = [self(xi) for xi in x]
+        loss = self.loss(y, y_pred) + self.regularization(self.weights())
         topo = loss.make_topo()
         for t in range(1, epochs+1):
-            print(f"loss in epoch {t}: {loss.data}")
-            loss.backprop(topo)
-            for p in self.parameters():
-                p.m = omega1 * p.m + (1 - omega1) * p.grad
-                p.v = omega2 * p.v + (1 - omega2) * p.grad**2
+            epoch_loss = 0
+            for batch_start in range(0, len(outputs), batch_size):
+                batch_stop = batch_start + batch_size
+                for i in range(batch_start, batch_stop):
+                    for j in range(len(inputs[i])):
+                        x[i%batch_size][j].data = inputs[i][j]
+                    for j in range(len(outputs[i])):
+                        y[i%batch_size][j].data = outputs[i][j]
+                for node in topo:
+                    node.update()
+                epoch_loss += loss.data
+                loss.backprop(topo)
+                for p in self.parameters():
+                    p.m = omega1 * p.m + (1 - omega1) * p.grad
+                    p.v = omega2 * p.v + (1 - omega2) * p.grad**2
 
-                m_hat = p.m / (1 - omega1 ** t)
-                v_hat = p.v / (1 - omega2 ** t)
+                    m_hat = p.m / (1 - omega1 ** t)
+                    v_hat = p.v / (1 - omega2 ** t)
 
-                p.data = p.data - lr * m_hat / (math.sqrt(v_hat) + eps)
-            for node in topo:
-                node.update()
+                    p.data = p.data - lr * m_hat / (math.sqrt(v_hat) + eps)
 
-        return loss
+            print(f"loss in epoch {t}: {epoch_loss}")
 
     def test(self, inputs, outputs):
         y_pred = [self(x) for x in inputs]
@@ -187,7 +192,10 @@ class Network:
         out_uniq = unique(from_categorical(outputs))
         pred_uniq = unique(from_categorical(y_pred))
         print("Model classification stats:")
+        print(list(pred_uniq.keys()))
         for k in out_uniq:
+            if k not in pred_uniq:
+                pred_uniq[k] = 0
             print(f"\tclass {k} expected: {out_uniq[k]}, got: {pred_uniq[k]}")
 
         return accuracy
