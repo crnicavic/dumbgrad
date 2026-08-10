@@ -1,6 +1,5 @@
 import numpy as np
 import math
-from collections import namedtuple
 
 class Value:
     __slots__ = ('data', 'grad', 'children', 'op', 'label')
@@ -215,10 +214,3 @@ class Value:
         else:
             return f"label = {self.label}, data = {self.data}, gradient = {self.grad}, op = {self.op}"
 
-
-class Parameter(Value):
-    __slots__ = ('m', 'v')
-    def __init__(self, data, op=None, children=[], label=''):
-        super().__init__(data, op, children, label)
-        self.m = 0
-        self.v = 0
