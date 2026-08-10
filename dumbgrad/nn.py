@@ -1,4 +1,4 @@
-from dumbgrad.engine import Value, Parameter
+from dumbgrad.engine import Value
 from dumbgrad.utils import *
 import math
 import random
@@ -29,7 +29,7 @@ class Parameter(Value):
         self.v = 0
 
 class Optimizer:
-    def __init__(self, omega1=0.9, omega2=0.99, lr=0.01, eps=1e-6):
+    def __init__(self, omega1=0.9, omega2=0.99, lr=0.001, eps=1e-6):
         self.omega1 = omega1
         self.omega2 = omega2
         self.lr = lr
@@ -46,7 +46,7 @@ class Optimizer:
 
 class Regularization():
     def __init__(self, alpha=0.01):
-        self.alpha = 0.01
+        self.alpha = alpha
 
 class L1Regularization(Regularization):
     def __call__(self, weights):
