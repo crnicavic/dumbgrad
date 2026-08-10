@@ -1,5 +1,5 @@
 from dumbgrad.engine import Value
-from dumbgrad.nn import Network, Input, Layer
+from dumbgrad.nn import *
 
 def test_xor():
     n = Network([
@@ -7,7 +7,8 @@ def test_xor():
         Layer(5, activation="leaky_relu"),
         Layer(2, activation="softmax")
     ])
-    n.build(seed=2000)
+    opt = Optimizer(lr=0.01)
+    n.build(seed=2000, optimizer=opt)
 
     x = [
         [0, 0],
