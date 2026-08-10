@@ -3,6 +3,16 @@ import itertools
 def to_categorical(y, num_classes):
     """
     Convert "regular" array to one-hot encoded matrix
+
+    Something like:
+    [4, 2, 0]
+
+    Will be converted to:
+    [
+      [0 0 0 0 1],
+      [0 0 1 0 0],
+      [1 0 0 0 0]
+    ]
     """
     batch_size = len(y)
     categorical = [[0 for _j in range(num_classes)] for _i in range(batch_size)]
@@ -13,16 +23,33 @@ def to_categorical(y, num_classes):
 def from_categorical(y):
     """
     Convert a one-hot encoded matrix to "regular array"
-    """
-    regular = [0 for _ in range(len(y))]
-    for i in range(len(y)):
-        for j in range(len(y[i])):
-            regular[i] = argmax(y[i])
 
-    return regular
+    Something like:
+    [
+      [0 0 0 0 1],
+      [0 0 1 0 0],
+      [1 0 0 0 0]
+    ]
+    Will be converted to:
+    [4, 2, 0]
+    """
+    return [argmax(row) for row in y]
     
 
 def normalize(x, per_column=False):
+    """
+    Iterate through the entirety of the input and normalize
+    in accordance to the formula:
+    (x - lo) / (hi - lo)
+    where:
+     - lo is the minimum of the target
+     - hi is the maximum of the target
+
+    If the per column flag is True, the hi and lo
+    are calculated per column, and then each column
+    is normalized separetely.
+    Useful when each feature has it's own magnitude of size.
+    """
     scale = lambda val, lo, hi: (val - lo) / (hi - lo)
     if per_column == True:
         # list(zip(*x)) inverts the rows and columns
