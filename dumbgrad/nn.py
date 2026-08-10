@@ -186,6 +186,10 @@ class Network:
                 batches.append(batch)
             return batches
 
+        def update_placeholders(placeholders, new_values):
+            for placeholder, new_val in zip(placeholders, new_values):
+                placeholder.data = new_val
+
         if len(inputs) != len(outputs):
             raise ValueError("Input and output size mismatch!")
 
@@ -199,21 +203,26 @@ class Network:
         # build computation graph for the first batch
         batches = batch_split(inputs, outputs, batch_size)
         batch_in, batch_out = batches[0]
-        # get "handles" to the inputs and outputs
-        x = [[Value(col) for col in row] for row in batch_in]
-        y = [[Value(col) for col in row] for row in batch_out]
-        y_pred = [self(xi) for xi in x]
-        loss = self.loss(y, y_pred) + self.regularization(self.weights())
+        # get "handles" to the inputs and outputs, that are just switched
+        # in a computation graph
+        placeholders_x = [[Value(col) for col in row] for row in batch_in]
+        placeholders_y = [[Value(col) for col in row] for row in batch_out]
+        y_pred = [self(x) for x in placeholders_x]
+        loss = self.loss(placeholders_y, y_pred) + self.regularization(self.weights())
         topo = loss.make_topo()
+
+        # after graph is ready, put everything in flat arrays
+        # because doing matrix operations is redundant
+        placeholders_x = flatten(placeholders_x)
+        placeholders_y = flatten(placeholders_y)
+        batches = [(flatten(bi), flatten(bo)) for bi, bo in batches]
 
         for t in range(1, epochs+1):
             epoch_loss = 0
             for batch_in, batch_out in batches:
-                # update the graph with values from new batch
-                for a, b in zip(flatten(x), flatten(batch_in)):
-                    a.data = b
-                for a, b in zip(flatten(y), flatten(batch_out)):
-                    a.data = b
+                # update the "graph" with values from new batch
+                update_placeholders(placeholders_x, batch_in)
+                update_placeholders(placeholders_y, batch_out)
                 loss.recompute(topo)
                 epoch_loss += loss.data
                 loss.backprop(topo)
