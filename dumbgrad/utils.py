@@ -74,6 +74,22 @@ def argmax(arr):
     return m
 
 def unique(arr):
+    """
+    Returns a dictionary with each unique value
+    in an array, where each key is the value of the
+    array, and the dictionary value is the number of
+    occurances
+
+    For an array:
+    [1 1 4 5 9 1 9]
+    return dictionary would be:
+    {
+    1: 3
+    4: 1
+    5: 1
+    9: 2
+    }
+    """
     unique = {}
     for a in arr:
         if a in unique:
