@@ -177,7 +177,7 @@ class Network:
 
         self.layers.pop(0)
 
-    def train(self, inputs, outputs, batch_size=1, epochs=100):
+    def train(self, inputs, outputs, batch_size=1, epochs=10):
         def batch_split(inputs, outputs, batch_size):
             batches = []
             for start in range(0, len(outputs), batch_size):
@@ -217,6 +217,8 @@ class Network:
         placeholders_y = flatten(placeholders_y)
         batches = [(flatten(bi), flatten(bo)) for bi, bo in batches]
 
+        # cache to avoid triple list comp every loop
+        params = self.parameters()
         for t in range(1, epochs+1):
             epoch_loss = 0
             for batch_in, batch_out in batches:
@@ -226,7 +228,7 @@ class Network:
                 loss.recompute(topo)
                 epoch_loss += loss.data
                 loss.backprop(topo)
-                for p in self.parameters():
+                for p in params:
                     self.optimizer(p, t)
 
             print(f"loss in epoch {t}: {epoch_loss}")
