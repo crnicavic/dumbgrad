@@ -190,15 +190,8 @@ class Network:
             for placeholder, new_val in zip(placeholders, new_values):
                 placeholder.data = new_val
 
-        if len(inputs) != len(outputs):
-            raise ValueError("Input and output size mismatch!")
-
-        if batch_size < 1:
-            raise ValueError("Batch size can't be less than 1")
-        elif batch_size > len(outputs):
-            raise ValueError("Batch size can't be greater than dataset size")
-        elif len(outputs) % batch_size != 0:
-            raise ValueError(f"Batches aren't even! {len(outputs)}/{batch_size}")
+        assert len(inputs) != len(outputs), "Input and output size mismatch!"
+        assert batch_size > 0 and batch_size < len(outputs), "bad batch_size!"
 
         # build computation graph for the first batch
         batches = batch_split(inputs, outputs, batch_size)
