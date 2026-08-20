@@ -4,20 +4,21 @@ from dumbgrad.utils import *
 from sklearn.model_selection import train_test_split
 from sklearn.datasets import load_breast_cancer
 
-dataset = load_breast_cancer()
-x, y = dataset.data.tolist(), dataset.target.tolist()
-x = normalize(x, per_column=True)
-num_classes = len(unique(y))
-y = to_categorical(y, num_classes=num_classes)
-x_train, x_test, y_train, y_test = train_test_split(x, y, test_size=0.3, shuffle=True, random_state=0)
+if __name__ == "__main__":
+    dataset = load_breast_cancer()
+    x, y = dataset.data.tolist(), dataset.target.tolist()
+    x = normalize(x, per_column=True)
+    num_classes = len(unique(y))
+    y = to_categorical(y, num_classes=num_classes)
+    x_train, x_test, y_train, y_test = train_test_split(x, y, test_size=0.3, shuffle=True, random_state=0)
 
-n = Network([
-    Input(len(x[0])),
-    Layer(30),
-    Layer(30),
-    Layer(num_classes, activation="softmax")
-])
-reg = L2Regularization()
-n.build(seed=0, loss="cross_entropy", regularization=reg)
-n.train(x_train, y_train, batch_size=10, epochs=15)
-n.test(x_test, y_test)
+    n = Network([
+        Input(len(x[0])),
+        Layer(30),
+        Layer(30),
+        Layer(num_classes, activation="softmax")
+    ])
+    reg = L2Regularization()
+    n.build(seed=0, loss="cross_entropy", regularization=reg)
+    n.train(x_train, y_train, batch_size=10, epochs=15, n_jobs=2)
+    n.test(x_test, y_test)
