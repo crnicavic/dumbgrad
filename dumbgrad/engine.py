@@ -139,6 +139,9 @@ class Value:
         graph after updating the parameters.
         """
         for node in topo:
+            # NOTE: this has to be done, because if not,
+            # backprop will keep accumulating gradients
+            # which will explode at some point!
             node.grad = 0
             match node.op:
                 case '+':
