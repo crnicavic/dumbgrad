@@ -190,7 +190,7 @@ class Network:
             for placeholder, new_val in zip(placeholders, new_values):
                 placeholder.data = new_val
 
-        assert len(inputs) != len(outputs), "Input and output size mismatch!"
+        assert len(inputs) == len(outputs), "Input and output size mismatch!"
         assert batch_size > 0 and batch_size < len(outputs), "bad batch_size!"
 
         # build computation graph for the first batch
