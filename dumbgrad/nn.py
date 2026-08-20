@@ -2,6 +2,9 @@ from dumbgrad.engine import Value
 from dumbgrad.utils import *
 import math
 import random
+import time
+import multiprocessing as mp
+import copy
 
 def sum_of_squares(_y, _y_pred):
     y = flatten(_y)
@@ -177,54 +180,88 @@ class Network:
 
         self.layers.pop(0)
 
-    def train(self, inputs, outputs, batch_size=1, epochs=10):
-        def batch_split(inputs, outputs, batch_size):
-            batches = []
-            for start in range(0, len(outputs), batch_size):
-                stop = start + batch_size
-                batch = (list(inputs[start:stop]), list(outputs[start:stop]))
-                batches.append(batch)
-            return batches
+    def train(self, inputs, outputs, batch_size=1, epochs=10, n_jobs=1):
+        assert len(inputs) == len(outputs), "Input and output size mismatch!"
+        assert batch_size > 0 and batch_size <= len(outputs), "bad batch_size!"
+        start_time = time.perf_counter()
 
+        batches = make_batches(inputs, outputs, batch_size)
+
+        # if there are more batches then specified workers, limit
+        # so that only the necessary amount of processes are created
+        n_jobs = n_jobs if len(batches) > n_jobs else len(batches)
+
+        # NOTE: for now eacn batch gets it's own process
+        input_queues = [mp.Queue() for _ in range(n_jobs)]
+        output_queues = [mp.Queue() for _ in range(n_jobs)]
+        split_batches = array_split(batches, n_jobs)
+        processes = [mp.Process(target=self.worker,
+                                args=(split_batches[i],
+                                      output_queues[i],
+                                      input_queues[i]
+                                      )
+                                )
+                     for i in range(n_jobs)]
+
+        for p in processes:
+            p.start()
+        # cache to avoid triple list comp every loop
+        params = self.parameters()
+        for t in range(1, epochs+1):
+            for output_queue in output_queues:
+                output_queue.put(copy.deepcopy(params))
+
+            inbox = [input_queue.get() for input_queue in input_queues]
+
+            losses, grads = map(list, zip(*inbox))
+            print(f"loss in epoch {t}: {sum(losses)}")
+            # apply gradients
+            for p, g in zip(params, list(zip(*grads))):
+                p.grad = sum(g)/len(batches)
+
+            for p in params:
+                self.optimizer(p, t)
+
+        end_time = time.perf_counter()
+        print(f"training time on {len(outputs)} samples with {n_jobs} workers: {end_time - start_time}s")
+
+        for output_queue in output_queues:
+            output_queue.put(None)
+
+    def worker(self, batches, input_queue, output_queue):
         def update_placeholders(placeholders, new_values):
             for placeholder, new_val in zip(placeholders, new_values):
                 placeholder.data = new_val
 
-        assert len(inputs) != len(outputs), "Input and output size mismatch!"
-        assert batch_size > 0 and batch_size < len(outputs), "bad batch_size!"
-
-        # build computation graph for the first batch
-        batches = batch_split(inputs, outputs, batch_size)
         batch_in, batch_out = batches[0]
-        # get "handles" to the inputs and outputs, that are just switched
-        # in a computation graph
         placeholders_x = [[Value(col) for col in row] for row in batch_in]
         placeholders_y = [[Value(col) for col in row] for row in batch_out]
         y_pred = [self(x) for x in placeholders_x]
         loss = self.loss(placeholders_y, y_pred) + self.regularization(self.weights())
         topo = loss.make_topo()
 
-        # after graph is ready, put everything in flat arrays
-        # because doing matrix operations is redundant
         placeholders_x = flatten(placeholders_x)
         placeholders_y = flatten(placeholders_y)
-        batches = [(flatten(bi), flatten(bo)) for bi, bo in batches]
 
-        # cache to avoid triple list comp every loop
+        batches = [(flatten(bi), flatten(bo)) for bi, bo in batches]
         params = self.parameters()
-        for t in range(1, epochs+1):
-            epoch_loss = 0
-            for batch_in, batch_out in batches:
-                # update the "graph" with values from new batch
+        grads = [0 for _ in range(len(params))]
+        while True: 
+            recv_params = input_queue.get()
+            if recv_params is None:
+                break
+            for p, p_new in zip(params, recv_params):
+                p.data = p_new.data
+            grads[:] = [0 for _ in grads]
+            for batch in batches:
+                batch_in, batch_out = batch
                 update_placeholders(placeholders_x, batch_in)
                 update_placeholders(placeholders_y, batch_out)
                 loss.recompute(topo)
-                epoch_loss += loss.data
                 loss.backprop(topo)
-                for p in params:
-                    self.optimizer(p, t)
-
-            print(f"loss in epoch {t}: {epoch_loss}")
+                for i in range(len(grads)):
+                    grads[i] += params[i].grad
+            output_queue.put((loss.data, grads))
 
     def test(self, inputs, outputs):
         y_pred = [self(x) for x in inputs]
