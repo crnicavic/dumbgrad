@@ -91,8 +91,19 @@ class Neuron:
                 self.activation = Value.exp
 
     def __call__(self, x):
-        # activation
-        act = sum((wi * xi) for (wi, xi) in zip(self.w, x)) + self.b
+        """
+        This function returns the output of the neuron by combining
+        the products of weights and inputs.
+
+        As it turns out python's sum starts at zero, and thereby
+        adds a Value(0) as a child! In any network this causes
+        hundreds, or even thousands of extra nodes inside a topology
+
+        NOTE: loss also suffers from this, but at a scale that is negligable
+        """
+        act = self.b
+        for wi, xi in zip(self.w, x):
+            act += wi * xi
         return self.activation(act)
 
     def parameters(self):
@@ -183,7 +194,7 @@ class Network:
     def train(self, inputs, outputs, batch_size=1, epochs=10, n_jobs=1):
         assert len(inputs) == len(outputs), "Input and output size mismatch!"
         assert batch_size > 0 and batch_size <= len(outputs), "bad batch_size!"
-        start_time = time.perf_counter()
+        training_start_time = time.perf_counter()
 
         batches = make_batches(inputs, outputs, batch_size)
 
@@ -199,7 +210,8 @@ class Network:
                                 args=(split_batches[i],
                                       output_queues[i],
                                       input_queues[i]
-                                      )
+                                      ),
+                                name=f"worker{i}"
                                 )
                      for i in range(n_jobs)]
 
@@ -209,7 +221,7 @@ class Network:
         params = self.parameters()
         for t in range(1, epochs+1):
             for output_queue in output_queues:
-                output_queue.put(copy.deepcopy(params))
+                output_queue.put(params)
 
             inbox = [input_queue.get() for input_queue in input_queues]
 
@@ -222,11 +234,10 @@ class Network:
             for p in params:
                 self.optimizer(p, t)
 
-        end_time = time.perf_counter()
-        print(f"training time on {len(outputs)} samples with {n_jobs} workers: {end_time - start_time}s")
-
         for output_queue in output_queues:
             output_queue.put(None)
+
+        print(f"[core] training time on {len(outputs)} samples with {n_jobs} workers: {time.perf_counter() - training_start_time}s")
 
     def worker(self, batches, input_queue, output_queue):
         def update_placeholders(placeholders, new_values):
@@ -246,7 +257,7 @@ class Network:
         batches = [(flatten(bi), flatten(bo)) for bi, bo in batches]
         params = self.parameters()
         grads = [0 for _ in range(len(params))]
-        while True: 
+        while True:
             recv_params = input_queue.get()
             if recv_params is None:
                 break
