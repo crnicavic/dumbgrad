@@ -89,5 +89,5 @@ if __name__ == "__main__":
     opt = Optimizer(lr=0.01)
     reg = L2Regularization()
     n.build(seed=0, loss="cross_entropy", regularization=reg, optimizer=opt)
-    n.train(x_train, y_train, epochs=10, batch_size=43, n_jobs=4)
+    n.train(x_train, y_train, epochs=10, batch_size=43, n_workers=4)
     n.test(x_test, y_test)

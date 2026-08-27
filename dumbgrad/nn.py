@@ -191,29 +191,29 @@ class Network:
 
         self.layers.pop(0)
 
-    def train(self, inputs, outputs, batch_size=1, epochs=10, n_jobs=1):
+    def train(self, inputs, outputs, batch_size=1, epochs=10, n_workers=1):
         assert len(inputs) == len(outputs), "Input and output size mismatch!"
         assert batch_size > 0 and batch_size <= len(outputs), "bad batch_size!"
-        training_start_time = time.perf_counter()
+        start_time = time.perf_counter()
 
         batches = make_batches(inputs, outputs, batch_size)
 
-        # if there are more batches then specified workers, limit
+        # if there are more batches then specified training_workers, limit
         # so that only the necessary amount of processes are created
-        n_jobs = n_jobs if len(batches) > n_jobs else len(batches)
+        n_workers = n_workers if len(batches) > n_workers else len(batches)
 
         # NOTE: for now eacn batch gets it's own process
-        input_queues = [mp.Queue() for _ in range(n_jobs)]
-        output_queues = [mp.Queue() for _ in range(n_jobs)]
-        split_batches = array_split(batches, n_jobs)
-        processes = [mp.Process(target=self.worker,
+        input_queues = [mp.Queue() for _ in range(n_workers)]
+        output_queues = [mp.Queue() for _ in range(n_workers)]
+        split_batches = array_split(batches, n_workers)
+        processes = [mp.Process(target=self.training_worker,
                                 args=(split_batches[i],
                                       output_queues[i],
                                       input_queues[i]
                                       ),
-                                name=f"worker{i}"
+                                name=f"training_worker{i}"
                                 )
-                     for i in range(n_jobs)]
+                     for i in range(n_workers)]
 
         for p in processes:
             p.start()
@@ -237,9 +237,10 @@ class Network:
         for output_queue in output_queues:
             output_queue.put(None)
 
-        print(f"[core] training time on {len(outputs)} samples with {n_jobs} workers: {time.perf_counter() - training_start_time}s")
+        training_time = time.perf_counter() - start_time
+        print(f"training time on {len(outputs)} samples with {n_workers} workers: {training_time}s")
 
-    def worker(self, batches, input_queue, output_queue):
+    def training_worker(self, batches, input_queue, output_queue):
         def update_placeholders(placeholders, new_values):
             for placeholder, new_val in zip(placeholders, new_values):
                 placeholder.data = new_val
@@ -274,22 +275,44 @@ class Network:
                     grads[i] += params[i].grad
             output_queue.put((loss.data, grads))
 
-    def test(self, inputs, outputs):
+    def test(self, inputs, outputs, n_workers=1):
+        start_time = time.perf_counter()
+        samples = list(zip(inputs, outputs))
+        # if the testing set is smaller than the amount of
+        # specified workers, dont make jobless workers
+        n_workers = n_workers if len(inputs) > n_workers else len(inputs)
+        split_samples = array_split(samples, n_workers)
+        queue = mp.Queue()
+        processes = [mp.Process(target=self.testing_worker,
+                                args=(split_samples[i],
+                                      queue),
+                                name=f"training_worker{i}"
+                                )
+                     for i in range(n_workers)]
+
+        for p in processes:
+            p.start()
+
+        # combine the per class correct guesses into one dict
+        total_correct = 0
+        for _ in range(n_workers):
+            worker_correct = queue.get()
+            total_correct += worker_correct
+
+        accuracy = total_correct / len(outputs)
+        print(f"total accuracy: {accuracy}")
+        testing_time = time.perf_counter() - start_time
+        print(f"testing time on {len(outputs)} samples with {n_workers} workers: {testing_time}s")
+        return accuracy
+
+
+    def testing_worker(self, samples, queue):
+        inputs, outputs = list(zip(*samples))
+        #TODO This can be optimised with a placeholder and recomputes!
         y_pred = [self(x) for x in inputs]
         correct_count = 0
+        # get per class correct count
         for pred, output in zip(y_pred, outputs):
-            if argmax(pred) == argmax(output):
-                correct_count += 1
+            correct_count += int(argmax(pred) == argmax(output))
 
-        accuracy = correct_count / len(outputs)
-        print(f"accuracy on {len(outputs)} test samples: {accuracy}")
-        out_uniq = unique(from_categorical(outputs))
-        pred_uniq = unique(from_categorical(y_pred))
-        print("Model classification stats:")
-        print(list(pred_uniq.keys()))
-        for k in out_uniq:
-            if k not in pred_uniq:
-                pred_uniq[k] = 0
-            print(f"\tclass {k} expected: {out_uniq[k]}, got: {pred_uniq[k]}")
-
-        return accuracy
+        queue.put(correct_count)

@@ -20,5 +20,5 @@ if __name__ == "__main__":
     ])
     reg = L2Regularization()
     n.build(seed=0, loss="cross_entropy", regularization=reg)
-    n.train(x_train, y_train, batch_size=10, epochs=15, n_jobs=2)
+    n.train(x_train, y_train, batch_size=10, epochs=15, n_workers=2)
     n.test(x_test, y_test)
