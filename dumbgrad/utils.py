@@ -164,3 +164,7 @@ def array_split(array, n):
         total += section_size
 
     return split_array
+
+def update_placeholders(placeholders, new_values):
+    for placeholder, new_val in zip(placeholders, new_values):
+        placeholder.data = new_val
