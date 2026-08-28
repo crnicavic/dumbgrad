@@ -108,17 +108,29 @@ def make_batches(inputs, outputs, batch_size):
     a different size then the rest, and
     as such it will be dropped.
 
-    for an array:
-    [10, 9, 8, 7, 6, 5, 4, 3, 2, 1]
+    for arrays:
+    input=[1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+    output=[a, b, c, d, e, f, g, h, i, j]
     and batch_size=2 this returns:
-    [[10, 9], [8, 7], [6, 5], [4, 3], [2, 1]]
+    [
+        ([1, 2], [a, b]),
+        ([3, 4], [c, d]),
+        ([5, 6], [e, f]),
+        ([7, 8], [g, h]),
+        ([9, 10], [h, i])
+    ]
 
-    for an array:
-    [10, 9, 8, 7, 6, 5, 4, 3, 2, 1]
+    for arrays:
+    input=[1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+    output=[a, b, c, d, e, f, g, h, i, j]
     and batch_size=3 this returns:
-    [[10, 9, 8], [7, 6, 5], [4, 3, 2]]
+    [
+        ([1, 2, 3], [a, b, c]),
+        ([4, 5, 6], [d, e, f]),
+        ([7, 8, 9], [g, h, i])
+    ]
 
-    Note that the 1 was dropped
+    Note that the 10 and j were dropped
     """
     batches = []
     for start in range(0, len(outputs), batch_size):
