@@ -202,7 +202,6 @@ class Network:
         # so that only the necessary amount of processes are created
         n_workers = n_workers if len(batches) > n_workers else len(batches)
 
-        # NOTE: for now eacn batch gets it's own process
         input_queues = [mp.Queue() for _ in range(n_workers)]
         output_queues = [mp.Queue() for _ in range(n_workers)]
         split_batches = array_split(batches, n_workers)
@@ -309,23 +308,26 @@ class Network:
 
 
     def testing_worker(self, samples, queue):
-        #TODO This can be optimised with a placeholder and recomputes!
-        # the basic jist is that the prediction is an array of values
-        # which are the values of the activations on the last layer.
-        # That is problematic because those are N value objects
-        # that are completely independent.
-        # That would require calling make_topo and recompute N times.
-        # That is not very efficient. It might still be faster simply
-        # because no new memory is being allocated.
+        """
+        When calling the network object, it creates a prediction
+        for the input. The prediction is a list of value objects
+        The approach is to make a dummy node with all of those
+        objects as children. By calling make topo, a single
+        recompute call will do the entire prediction again.
+
+        By updating the inputs (via placeholders), the entire
+        and then calling recompute, it is possible to do very
+        fast predictions whilst using very little memory
+        """
         inputs, outputs = list(zip(*samples))
         placeholders_x = [Value(i) for i in inputs[0]]
         pred = self(placeholders_x)
-        topos = [p.make_topo() for p in pred]
+        dummy = Value(0, children=pred)
+        topo = dummy.make_topo()
         correct_count = 0
-        for i, o in zip(inputs, outputs):
-            update_placeholders(placeholders_x, i)
-            for p, topo in zip(pred, topos):
-                p.recompute(topo)
-            correct_count += int(argmax(pred) == argmax(o))
+        for i in range(len(inputs)):
+            update_placeholders(placeholders_x, inputs[i])
+            dummy.recompute(topo)
+            correct_count += int(argmax([p.data for p in pred]) == argmax(outputs[i]))
 
         queue.put(correct_count)
