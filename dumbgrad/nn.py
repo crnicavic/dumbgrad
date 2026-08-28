@@ -309,12 +309,23 @@ class Network:
 
 
     def testing_worker(self, samples, queue):
-        inputs, outputs = list(zip(*samples))
         #TODO This can be optimised with a placeholder and recomputes!
-        y_pred = [self(x) for x in inputs]
+        # the basic jist is that the prediction is an array of values
+        # which are the values of the activations on the last layer.
+        # That is problematic because those are N value objects
+        # that are completely independent.
+        # That would require calling make_topo and recompute N times.
+        # That is not very efficient. It might still be faster simply
+        # because no new memory is being allocated.
+        inputs, outputs = list(zip(*samples))
+        placeholders_x = [Value(i) for i in inputs[0]]
+        pred = self(placeholders_x)
+        topos = [p.make_topo() for p in pred]
         correct_count = 0
-        # get per class correct count
-        for pred, output in zip(y_pred, outputs):
-            correct_count += int(argmax(pred) == argmax(output))
+        for i, o in zip(inputs, outputs):
+            update_placeholders(placeholders_x, i)
+            for p, topo in zip(pred, topos):
+                p.recompute(topo)
+            correct_count += int(argmax(pred) == argmax(o))
 
         queue.put(correct_count)
