@@ -240,11 +240,10 @@ class Network:
         training_time = time.perf_counter() - start_time
         print(f"training time on {len(outputs)} samples with {n_workers} workers: {training_time}s")
 
-    def training_worker(self, batches, input_queue, output_queue):
-        def update_placeholders(placeholders, new_values):
-            for placeholder, new_val in zip(placeholders, new_values):
-                placeholder.data = new_val
+        for p in processes:
+            p.join()
 
+    def training_worker(self, batches, input_queue, output_queue):
         batch_in, batch_out = batches[0]
         placeholders_x = [[Value(col) for col in row] for row in batch_in]
         placeholders_y = [[Value(col) for col in row] for row in batch_out]
@@ -298,6 +297,9 @@ class Network:
         for _ in range(n_workers):
             worker_correct = queue.get()
             total_correct += worker_correct
+
+        for p in processes:
+            p.join()
 
         accuracy = total_correct / len(outputs)
         print(f"total accuracy: {accuracy}")
