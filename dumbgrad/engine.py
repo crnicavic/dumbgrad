@@ -139,16 +139,19 @@ class Value:
         graph after updating the parameters.
         """
         for node in topo:
+            # NOTE: this has to be done, because if not,
+            # backprop will keep accumulating gradients
+            # which will explode at some point!
             node.grad = 0
             match node.op:
+                case None:
+                    continue
                 case '+':
                     node.data = node.children[0].data + node.children[1].data
-                case '-':
-                    node.data = node.children[0].data - node.children[1].data
                 case '*':
                     node.data = node.children[0].data * node.children[1].data
-                case '**':
-                    node.data = node.children[0].data ** node.children[1].data
+                case '-':
+                    node.data = node.children[0].data - node.children[1].data
                 case 'tanh':
                     node.data = math.tanh(node.children[0].data)
                 case 'sigmoid':
@@ -164,6 +167,8 @@ class Value:
                     node.data = math.log(node.children[0].data)
                 case 'abs':
                     node.data = abs(node.children[0].data)
+                case '**':
+                    node.data = node.children[0].data ** node.children[1].data
 
     def backprop(self, topo):
         """
@@ -175,6 +180,8 @@ class Value:
 
         for node in reversed(topo):
             match node.op:
+                case None:
+                    continue
                 case '+':
                     node.children[0].grad += node.grad
                     node.children[1].grad += node.grad
@@ -184,8 +191,6 @@ class Value:
                 case '-':
                     node.children[0].grad += node.grad
                     node.children[1].grad -= node.grad
-                case '**':
-                    node.children[0].grad += node.children[1].data * (node.children[0].data ** (node.children[1].data -1)) * node.grad
                 case 'tanh':
                     node.children[0].grad += (1 - node.data**2) * node.grad
                 case 'sigmoid':
@@ -207,6 +212,8 @@ class Value:
                     else:
                         d = 0
                     node.children[0].grad += node.grad * d
+                case '**':
+                    node.children[0].grad += node.children[1].data * (node.children[0].data ** (node.children[1].data -1)) * node.grad
 
     def __repr__(self):
         if not self.label:

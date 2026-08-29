@@ -2,6 +2,9 @@ from dumbgrad.engine import Value
 from dumbgrad.utils import *
 import math
 import random
+import time
+import multiprocessing as mp
+import copy
 
 def sum_of_squares(_y, _y_pred):
     y = flatten(_y)
@@ -88,8 +91,19 @@ class Neuron:
                 self.activation = Value.exp
 
     def __call__(self, x):
-        # activation
-        act = sum((wi * xi) for (wi, xi) in zip(self.w, x)) + self.b
+        """
+        This function returns the output of the neuron by combining
+        the products of weights and inputs.
+
+        As it turns out python's sum starts at zero, and thereby
+        adds a Value(0) as a child! In any network this causes
+        hundreds, or even thousands of extra nodes inside a topology
+
+        NOTE: loss also suffers from this, but at a scale that is negligable
+        """
+        act = self.b
+        for wi, xi in zip(self.w, x):
+            act += wi * xi
         return self.activation(act)
 
     def parameters(self):
@@ -177,71 +191,143 @@ class Network:
 
         self.layers.pop(0)
 
-    def train(self, inputs, outputs, batch_size=1, epochs=10):
-        def batch_split(inputs, outputs, batch_size):
-            batches = []
-            for start in range(0, len(outputs), batch_size):
-                stop = start + batch_size
-                batch = (list(inputs[start:stop]), list(outputs[start:stop]))
-                batches.append(batch)
-            return batches
-
-        def update_placeholders(placeholders, new_values):
-            for placeholder, new_val in zip(placeholders, new_values):
-                placeholder.data = new_val
-
+    def train(self, inputs, outputs, batch_size=1, epochs=10, n_workers=1):
         assert len(inputs) == len(outputs), "Input and output size mismatch!"
-        assert batch_size > 0 and batch_size < len(outputs), "bad batch_size!"
+        assert batch_size > 0 and batch_size <= len(outputs), "bad batch_size!"
+        start_time = time.perf_counter()
 
-        # build computation graph for the first batch
-        batches = batch_split(inputs, outputs, batch_size)
+        batches = make_batches(inputs, outputs, batch_size)
+
+        # if there are more batches then specified training_workers, limit
+        # so that only the necessary amount of processes are created
+        n_workers = n_workers if len(batches) > n_workers else len(batches)
+
+        input_queues = [mp.Queue() for _ in range(n_workers)]
+        output_queues = [mp.Queue() for _ in range(n_workers)]
+        split_batches = array_split(batches, n_workers)
+        processes = [mp.Process(target=self.training_worker,
+                                args=(split_batches[i],
+                                      output_queues[i],
+                                      input_queues[i]
+                                      ),
+                                name=f"training_worker{i}"
+                                )
+                     for i in range(n_workers)]
+
+        for p in processes:
+            p.start()
+        # cache to avoid triple list comp every loop
+        params = self.parameters()
+        for t in range(1, epochs+1):
+            for output_queue in output_queues:
+                output_queue.put(params)
+
+            inbox = [input_queue.get() for input_queue in input_queues]
+
+            losses, grads = map(list, zip(*inbox))
+            print(f"loss in epoch {t}: {sum(losses)}")
+            # apply gradients
+            for p, g in zip(params, list(zip(*grads))):
+                p.grad = sum(g)/len(batches)
+
+            for p in params:
+                self.optimizer(p, t)
+
+        for output_queue in output_queues:
+            output_queue.put(None)
+
+        training_time = time.perf_counter() - start_time
+        print(f"training time on {len(outputs)} samples with {n_workers} workers: {training_time}s")
+
+        for p in processes:
+            p.join()
+
+    def training_worker(self, batches, input_queue, output_queue):
         batch_in, batch_out = batches[0]
-        # get "handles" to the inputs and outputs, that are just switched
-        # in a computation graph
         placeholders_x = [[Value(col) for col in row] for row in batch_in]
         placeholders_y = [[Value(col) for col in row] for row in batch_out]
         y_pred = [self(x) for x in placeholders_x]
         loss = self.loss(placeholders_y, y_pred) + self.regularization(self.weights())
         topo = loss.make_topo()
 
-        # after graph is ready, put everything in flat arrays
-        # because doing matrix operations is redundant
         placeholders_x = flatten(placeholders_x)
         placeholders_y = flatten(placeholders_y)
-        batches = [(flatten(bi), flatten(bo)) for bi, bo in batches]
 
-        # cache to avoid triple list comp every loop
+        batches = [(flatten(bi), flatten(bo)) for bi, bo in batches]
         params = self.parameters()
-        for t in range(1, epochs+1):
-            epoch_loss = 0
-            for batch_in, batch_out in batches:
-                # update the "graph" with values from new batch
+        grads = [0 for _ in range(len(params))]
+        while True:
+            recv_params = input_queue.get()
+            if recv_params is None:
+                break
+            for p, p_new in zip(params, recv_params):
+                p.data = p_new.data
+            grads[:] = [0 for _ in grads]
+            for batch in batches:
+                batch_in, batch_out = batch
                 update_placeholders(placeholders_x, batch_in)
                 update_placeholders(placeholders_y, batch_out)
                 loss.recompute(topo)
-                epoch_loss += loss.data
                 loss.backprop(topo)
-                for p in params:
-                    self.optimizer(p, t)
+                for i in range(len(grads)):
+                    grads[i] += params[i].grad
+            output_queue.put((loss.data, grads))
 
-            print(f"loss in epoch {t}: {epoch_loss}")
+    def test(self, inputs, outputs, n_workers=1):
+        start_time = time.perf_counter()
+        samples = list(zip(inputs, outputs))
+        # if the testing set is smaller than the amount of
+        # specified workers, dont make jobless workers
+        n_workers = n_workers if len(inputs) > n_workers else len(inputs)
+        split_samples = array_split(samples, n_workers)
+        queue = mp.Queue()
+        processes = [mp.Process(target=self.testing_worker,
+                                args=(split_samples[i],
+                                      queue),
+                                name=f"training_worker{i}"
+                                )
+                     for i in range(n_workers)]
 
-    def test(self, inputs, outputs):
-        y_pred = [self(x) for x in inputs]
-        correct_count = 0
-        for pred, output in zip(y_pred, outputs):
-            if argmax(pred) == argmax(output):
-                correct_count += 1
+        for p in processes:
+            p.start()
 
-        accuracy = correct_count / len(outputs)
-        print(f"accuracy on {len(outputs)} test samples: {accuracy}")
-        out_uniq = unique(from_categorical(outputs))
-        pred_uniq = unique(from_categorical(y_pred))
-        print("Model classification stats:")
-        print(list(pred_uniq.keys()))
-        for k in out_uniq:
-            if k not in pred_uniq:
-                pred_uniq[k] = 0
-            print(f"\tclass {k} expected: {out_uniq[k]}, got: {pred_uniq[k]}")
+        # combine the per class correct guesses into one dict
+        total_correct = 0
+        for _ in range(n_workers):
+            worker_correct = queue.get()
+            total_correct += worker_correct
 
+        for p in processes:
+            p.join()
+
+        accuracy = total_correct / len(outputs)
+        print(f"total accuracy: {accuracy}")
+        testing_time = time.perf_counter() - start_time
+        print(f"testing time on {len(outputs)} samples with {n_workers} workers: {testing_time}s")
         return accuracy
+
+
+    def testing_worker(self, samples, queue):
+        """
+        When calling the network object, it creates a prediction
+        for the input. The prediction is a list of value objects
+        The approach is to make a dummy node with all of those
+        objects as children. By calling make topo, a single
+        recompute call will do the entire prediction again.
+
+        By updating the inputs (via placeholders), the entire
+        and then calling recompute, it is possible to do very
+        fast predictions whilst using very little memory
+        """
+        inputs, outputs = list(zip(*samples))
+        placeholders_x = [Value(i) for i in inputs[0]]
+        pred = self(placeholders_x)
+        dummy = Value(0, children=pred)
+        topo = dummy.make_topo()
+        correct_count = 0
+        for i in range(len(inputs)):
+            update_placeholders(placeholders_x, inputs[i])
+            dummy.recompute(topo)
+            correct_count += int(argmax([p.data for p in pred]) == argmax(outputs[i]))
+
+        queue.put(correct_count)

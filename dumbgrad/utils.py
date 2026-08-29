@@ -1,4 +1,5 @@
 import itertools
+from math import ceil, floor
 
 def to_categorical(y, num_classes):
     """
@@ -98,3 +99,84 @@ def unique(arr):
             unique[a] = 1
 
     return unique
+
+def make_batches(inputs, outputs, batch_size):
+    """
+    Split the dataset into batches.
+    if the sample count is not divisible by
+    the batch size, the last batch will be
+    a different size then the rest, and
+    as such it will be dropped.
+
+    for arrays:
+    input=[1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+    output=[a, b, c, d, e, f, g, h, i, j]
+    and batch_size=2 this returns:
+    [
+        ([1, 2], [a, b]),
+        ([3, 4], [c, d]),
+        ([5, 6], [e, f]),
+        ([7, 8], [g, h]),
+        ([9, 10], [h, i])
+    ]
+
+    for arrays:
+    input=[1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+    output=[a, b, c, d, e, f, g, h, i, j]
+    and batch_size=3 this returns:
+    [
+        ([1, 2, 3], [a, b, c]),
+        ([4, 5, 6], [d, e, f]),
+        ([7, 8, 9], [g, h, i])
+    ]
+
+    Note that the 10 and j were dropped
+    """
+    batches = []
+    for start in range(0, len(outputs), batch_size):
+        stop = start + batch_size
+        # drop uneven batch
+        if stop > len(outputs):
+            break
+        batch = (list(inputs[start:stop]), list(outputs[start:stop]))
+        batches.append(batch)
+    return batches
+
+def array_split(array, n):
+    """
+    Create equal chunks of an array.
+    for an array:
+    [10, 9, 8, 7, 6, 5, 4, 3, 2, 1]
+    split into 2 parts will return:
+    [[10, 9, 8, 7, 6], [5, 4, 3, 2, 1]]
+
+    In case of an uneven split, the algorithm
+    will distribute the the remainder in a best effort manner
+
+    for an array:
+    [10, 9, 8, 7, 6, 5, 4, 3, 2, 1]
+    split into 4 parts, the split will be [3, 3, 2, 2]:
+    [[10, 9, 8], [7, 6, 5], [4, 3], [2, 1]]
+
+    This differs from batching in a way that
+    this creates n arrays that are the same size,
+    and batching creates arrays that have a length
+    of n.
+    """
+    chunk, rem = divmod(len(array), n)
+    # "distribute" the remainder of elements
+    section_sizes = [chunk+1 if i < rem else chunk for i in range(n)]
+    split_array = []
+    total = 0
+    for section_size in section_sizes:
+        if section_size != 0:
+            split_array.append(array[total:total+section_size])
+        else:
+            split_array.append([])
+        total += section_size
+
+    return split_array
+
+def update_placeholders(placeholders, new_values):
+    for placeholder, new_val in zip(placeholders, new_values):
+        placeholder.data = new_val
