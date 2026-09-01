@@ -196,17 +196,20 @@ class Network:
         assert batch_size > 0 and batch_size <= len(outputs), "bad batch_size!"
         start_time = time.perf_counter()
 
-        batches = make_batches(inputs, outputs, batch_size)
+        input_batches, output_batches = make_batches(inputs, outputs, batch_size)
 
         # if there are more batches then specified training_workers, limit
         # so that only the necessary amount of processes are created
-        n_workers = n_workers if len(batches) > n_workers else len(batches)
+        batch_count = math.floor(len(inputs)/batch_size)
+        n_workers = n_workers if batch_count > n_workers else batch_count
 
         input_queues = [mp.Queue() for _ in range(n_workers)]
         output_queues = [mp.Queue() for _ in range(n_workers)]
-        split_batches = array_split(batches, n_workers)
+        split_input_batches = array_split(input_batches, n_workers)
+        split_output_batches = array_split(output_batches, n_workers)
         processes = [mp.Process(target=self.training_worker,
-                                args=(split_batches[i],
+                                args=(split_input_batches[i],
+                                      split_output_batches[i],
                                       output_queues[i],
                                       input_queues[i]
                                       ),
@@ -242,18 +245,17 @@ class Network:
         for p in processes:
             p.join()
 
-    def training_worker(self, batches, input_queue, output_queue):
-        batch_in, batch_out = batches[0]
-        placeholders_x = [[Value(col) for col in row] for row in batch_in]
-        placeholders_y = [[Value(col) for col in row] for row in batch_out]
+    def training_worker(self, inputs, outputs, input_queue, output_queue):
+        placeholders_x = [[Value(col) for col in row] for row in inputs[0]]
+        placeholders_y = [[Value(col) for col in row] for row in outputs[0]]
         y_pred = [self(x) for x in placeholders_x]
         loss = self.loss(placeholders_y, y_pred) + self.regularization(self.weights())
         topo = loss.make_topo()
 
-        placeholders_x = flatten(placeholders_x)
-        placeholders_y = flatten(placeholders_y)
+        # flatten the arrays for easier access
+        flat_x = flatten(placeholders_x)
+        flat_y = flatten(placeholders_y)
 
-        batches = [(flatten(bi), flatten(bo)) for bi, bo in batches]
         params = self.parameters()
         grads = [0 for _ in range(len(params))]
         while True:
@@ -263,10 +265,9 @@ class Network:
             for p, p_new in zip(params, recv_params):
                 p.data = p_new.data
             grads[:] = [0 for _ in grads]
-            for batch in batches:
-                batch_in, batch_out = batch
-                update_placeholders(placeholders_x, batch_in)
-                update_placeholders(placeholders_y, batch_out)
+            for input_batch, output_batch in zip(inputs, outputs):
+                update_placeholders(flat_x, input_batch)
+                update_placeholders(flat_y, output_batch)
                 loss.recompute(topo)
                 loss.backprop(topo)
                 for i in range(len(grads)):

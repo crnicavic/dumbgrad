@@ -3,10 +3,9 @@ from sklearn.datasets import load_iris
 import random
 
 def are_batches_even(x, y, batch_size):
-    batches = make_batches(x, y, batch_size)
-    for batch in batches:
-        batch_in, batch_out = batch
-        if len(batch_in) != batch_size and len(batch_out) != batch_size:
+    input_batches, output_batches = make_batches(x, y, batch_size)
+    for input_batch, output_batch in zip(input_batches, output_batches):
+        if len(input_batch) != batch_size and len(output_batch) != batch_size:
             return False
 
     return True
@@ -57,11 +56,10 @@ def test_make_batches_uneven_drop():
     batch_sizes = [i for i in range(1, max(factors)) if i not in factors]
 
     for s in batch_sizes:
-        batches = make_batches(x, y, s)
+        input_batches, output_batches = make_batches(x, y, s)
         total_length = 0
-        for batch in batches:
-            batch_in, _ = batch
-            total_length += len(batch_in)
+        for input_batch, output_batch in zip(input_batches, output_batches):
+            total_length += len(input_batch)
 
         # assert that the batched samples and the
         # dropped samples amount the total sample count

@@ -132,15 +132,18 @@ def make_batches(inputs, outputs, batch_size):
 
     Note that the 10 and j were dropped
     """
-    batches = []
+    input_batches = []
+    output_batches = []
     for start in range(0, len(outputs), batch_size):
         stop = start + batch_size
         # drop uneven batch
         if stop > len(outputs):
             break
-        batch = (list(inputs[start:stop]), list(outputs[start:stop]))
-        batches.append(batch)
-    return batches
+        input_batch = inputs[start:stop]
+        output_batch = outputs[start:stop]
+        input_batches.append(input_batch)
+        output_batches.append(output_batch)
+    return input_batches, output_batches
 
 def array_split(array, n):
     """
