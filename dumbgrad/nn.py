@@ -9,9 +9,9 @@ import copy
 def sum_of_squares(_y, _y_pred):
     y = flat_iter(_y)
     y_pred = flat_iter(_y_pred)
-    diff = [(y1 - y2)**2 for y1, y2 in zip(y, y_pred)]
-    loss = sum(diff)
-    return loss
+    diffs = [(y1 - y2)**2 for y1, y2 in zip(y, y_pred)]
+
+    return value_sum(diffs)
 
 def cross_entropy(_y, _y_pred):
     y = flat_iter(_y)
@@ -21,8 +21,8 @@ def cross_entropy(_y, _y_pred):
         if y1 == 0:
             continue
         ent.append(-1 * y1 * y2.log())
-    loss = sum(ent)
-    return loss
+
+    return value_sum(ent)
 
 class Parameter(Value):
     __slots__ = ('m', 'v')
@@ -91,16 +91,8 @@ class Neuron:
                 self.activation = Value.exp
 
     def __call__(self, x):
-        """
-        This function returns the output of the neuron by combining
-        the products of weights and inputs.
-
-        As it turns out python's sum starts at zero, and thereby
-        adds a Value(0) as a child! In any network this causes
-        hundreds, or even thousands of extra nodes inside a topology
-
-        NOTE: loss also suffers from this, but at a scale that is negligable
-        """
+        # using the value_sum function here is better avoided
+        # but it's the same thing
         act = self.b
         for wi, xi in zip(self.w, x):
             act += wi * xi
@@ -119,11 +111,7 @@ class Layer:
 
         # sum the activation of the layer to get softmax
         if self.activation == "softmax":
-
-            # sum without zero
-            total_act = out[0]
-            for o in out[1:]:
-                total_act += o
+            total_act = value_sum(out)
 
             inv_total = total_act ** -1
             out = [o * inv_total for o in out]

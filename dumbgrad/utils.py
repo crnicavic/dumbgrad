@@ -202,3 +202,28 @@ def update_placeholders(placeholders, new_values):
 
     for placeholder, new_val in zip(iter_placeholders, iter_new_values):
         placeholder.data = new_val
+
+
+def value_sum(arr):
+    """
+    When calling python's standard sum() on an array
+    of Value objects, the result will be correct, however
+    it will have an unnecessary 0 node.
+
+    The reason for that is Value objects have an overload for +,
+    but it will create an instance of a Value object for the other
+    (non-Value) operand.
+
+    For example:
+    a = [Value(5), Value(6)]
+    s = sum(a)
+
+    s will be a Value object with .data = 11
+    and it's children will be:
+    [Value(0), Value(5), Value(6)]
+    """
+    total = arr[0]
+    for val in arr:
+        total += val
+
+    return total
