@@ -7,15 +7,15 @@ import multiprocessing as mp
 import copy
 
 def sum_of_squares(_y, _y_pred):
-    y = flatten(_y)
-    y_pred = flatten(_y_pred)
+    y = flat_iter(_y)
+    y_pred = flat_iter(_y_pred)
     diff = [(y1 - y2)**2 for y1, y2 in zip(y, y_pred)]
     loss = sum(diff)
     return loss
 
 def cross_entropy(_y, _y_pred):
-    y = flatten(_y)
-    y_pred = flatten(_y_pred)
+    y = flat_iter(_y)
+    y_pred = flat_iter(_y_pred)
     ent = []
     for y1, y2 in zip(y, y_pred):
         if y1 == 0:
@@ -198,8 +198,7 @@ class Network:
 
         input_batches, output_batches = make_batches(inputs, outputs, batch_size)
 
-        # if there are more batches then specified training_workers, limit
-        # so that only the necessary amount of processes are created
+        # don't create more processes than batches
         batch_count = math.floor(len(inputs)/batch_size)
         n_workers = n_workers if batch_count > n_workers else batch_count
 
@@ -207,6 +206,7 @@ class Network:
         output_queues = [mp.Queue() for _ in range(n_workers)]
         split_input_batches = array_split(input_batches, n_workers)
         split_output_batches = array_split(output_batches, n_workers)
+
         processes = [mp.Process(target=self.training_worker,
                                 args=(split_input_batches[i],
                                       split_output_batches[i],
@@ -219,19 +219,22 @@ class Network:
 
         for p in processes:
             p.start()
-        # cache to avoid triple list comp every loop
+
+        # cache parameters because self.parameters() is "slow"
         params = self.parameters()
+
         for t in range(1, epochs+1):
             for output_queue in output_queues:
                 output_queue.put(params)
 
-            inbox = [input_queue.get() for input_queue in input_queues]
+            # each message is a tuple of (loss, [gradients])
+            messages = [input_queue.get() for input_queue in input_queues]
 
-            losses, grads = map(list, zip(*inbox))
+            losses, grads = map(list, zip(*messages))
             print(f"loss in epoch {t}: {sum(losses)}")
-            # apply gradients
+            # apply averaged gradients
             for p, g in zip(params, list(zip(*grads))):
-                p.grad = sum(g)/len(batches)
+                p.grad = sum(g)/batch_count
 
             for p in params:
                 self.optimizer(p, t)
@@ -239,11 +242,11 @@ class Network:
         for output_queue in output_queues:
             output_queue.put(None)
 
-        training_time = time.perf_counter() - start_time
-        print(f"training time on {len(outputs)} samples with {n_workers} workers: {training_time}s")
-
         for p in processes:
             p.join()
+
+        training_time = time.perf_counter() - start_time
+        print(f"training time on {len(outputs)} samples with {n_workers} workers: {training_time}s")
 
     def training_worker(self, inputs, outputs, input_queue, output_queue):
         placeholders_x = [[Value(col) for col in row] for row in inputs[0]]
@@ -251,23 +254,21 @@ class Network:
         y_pred = [self(x) for x in placeholders_x]
         loss = self.loss(placeholders_y, y_pred) + self.regularization(self.weights())
         topo = loss.make_topo()
-
-        # flatten the arrays for easier access
-        flat_x = flatten(placeholders_x)
-        flat_y = flatten(placeholders_y)
-
         params = self.parameters()
         grads = [0 for _ in range(len(params))]
+
         while True:
             recv_params = input_queue.get()
             if recv_params is None:
                 break
+
             for p, p_new in zip(params, recv_params):
                 p.data = p_new.data
             grads[:] = [0 for _ in grads]
+
             for input_batch, output_batch in zip(inputs, outputs):
-                update_placeholders(flat_x, input_batch)
-                update_placeholders(flat_y, output_batch)
+                update_placeholders(placeholders_x, input_batch)
+                update_placeholders(placeholders_y, output_batch)
                 loss.recompute(topo)
                 loss.backprop(topo)
                 for i in range(len(grads)):
@@ -277,8 +278,8 @@ class Network:
     def test(self, inputs, outputs, n_workers=1):
         start_time = time.perf_counter()
         samples = list(zip(inputs, outputs))
-        # if the testing set is smaller than the amount of
-        # specified workers, dont make jobless workers
+
+        # don't create more processes than there are samples
         n_workers = n_workers if len(inputs) > n_workers else len(inputs)
         split_samples = array_split(samples, n_workers)
         queue = mp.Queue()

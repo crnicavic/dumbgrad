@@ -1,5 +1,6 @@
 import itertools
 from math import ceil, floor
+from collections.abc import Iterable
 
 def to_categorical(y, num_classes):
     """
@@ -64,6 +65,9 @@ def normalize(x, per_column=False):
         hi = max(flatten(x))
         return [[scale(x_, lo, hi) for x_ in row] for row in x]
 
+def flat_iter(ndarr):
+    return itertools.chain.from_iterable(ndarr)
+
 def flatten(ndarr):
     return list(itertools.chain.from_iterable(ndarr))
 
@@ -112,23 +116,15 @@ def make_batches(inputs, outputs, batch_size):
     input=[1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
     output=[a, b, c, d, e, f, g, h, i, j]
     and batch_size=2 this returns:
-    [
-        ([1, 2], [a, b]),
-        ([3, 4], [c, d]),
-        ([5, 6], [e, f]),
-        ([7, 8], [g, h]),
-        ([9, 10], [h, i])
-    ]
+    input_batches = [[1, 2], [3, 4], [5, 6], [7, 8], [9, 10]]
+    output_batches = [[a, b], [c, d], [e, f], [g, h], [i, j]]
 
     for arrays:
     input=[1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
     output=[a, b, c, d, e, f, g, h, i, j]
     and batch_size=3 this returns:
-    [
-        ([1, 2, 3], [a, b, c]),
-        ([4, 5, 6], [d, e, f]),
-        ([7, 8, 9], [g, h, i])
-    ]
+    input_batches = [[1, 2, 3], [4, 5, 6], [7, 8, 9]]
+    output_batches = [[a, b, c], [d, e, f], [g, h, i]]
 
     Note that the 10 and j were dropped
     """
@@ -181,5 +177,28 @@ def array_split(array, n):
     return split_array
 
 def update_placeholders(placeholders, new_values):
-    for placeholder, new_val in zip(placeholders, new_values):
+    """
+    Update the placeholders of a computation graph with new values
+
+    placeholders is a list of Value objects
+    new_values is a list of floats
+
+    The .data of each of the placeholders will become
+    the corresponding value of new_values
+
+    Because of flat_iter the function supports arbitrary nesting,
+    and as long as the dimensions of both of the lists match up,
+    the function will work.
+    """
+    if isinstance(placeholders[0], Iterable):
+        iter_placeholders = flat_iter(placeholders)
+    else:
+        iter_placeholders = iter(placeholders)
+
+    if isinstance(new_values[0], Iterable):
+        iter_new_values = flat_iter(new_values)
+    else:
+        iter_new_values = iter(new_values)
+
+    for placeholder, new_val in zip(iter_placeholders, iter_new_values):
         placeholder.data = new_val
