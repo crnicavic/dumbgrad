@@ -117,11 +117,14 @@ class Layer:
     def __call__(self, x):
         out = [n(x) for n in self.neurons]
 
-        # this has to be done this way to make the smallest comp graph
+        # sum the activation of the layer to get softmax
         if self.activation == "softmax":
+
+            # sum without zero
             total_act = out[0]
             for o in out[1:]:
                 total_act += o
+
             inv_total = total_act ** -1
             out = [o * inv_total for o in out]
         return out
