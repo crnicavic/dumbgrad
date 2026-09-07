@@ -268,14 +268,15 @@ class Network:
 
     def test(self, inputs, outputs, n_workers=1):
         start_time = time.perf_counter()
-        samples = list(zip(inputs, outputs))
 
         # don't create more processes than there are samples
         n_workers = n_workers if len(inputs) > n_workers else len(inputs)
-        split_samples = array_split(samples, n_workers)
+        split_inputs = array_split(inputs, n_workers)
+        split_outputs = array_split(outputs, n_workers)
         queue = mp.Queue()
         processes = [mp.Process(target=self.testing_worker,
-                                args=(split_samples[i],
+                                args=(split_inputs[i],
+                                      split_outputs[i],
                                       queue),
                                 name=f"training_worker{i}"
                                 )
@@ -300,7 +301,7 @@ class Network:
         return accuracy
 
 
-    def testing_worker(self, samples, queue):
+    def testing_worker(self, inputs, outputs, queue):
         """
         When calling the network object, it creates a prediction
         for the input. The prediction is a list of value objects
@@ -312,7 +313,6 @@ class Network:
         and then calling recompute, it is possible to do very
         fast predictions whilst using very little memory
         """
-        inputs, outputs = list(zip(*samples))
         placeholders_x = [Value(i) for i in inputs[0]]
         pred = self(placeholders_x)
         dummy = Value(0, children=pred)
