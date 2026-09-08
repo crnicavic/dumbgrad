@@ -81,6 +81,15 @@ class Value:
         out = Value(abs(self.data), 'abs', children=[self])
         return out
 
+    @staticmethod
+    def linear(weights, inputs, bias):
+        out = Value(0, 'linear', [*weights, *inputs, bias], label='linear')
+        for w, x in zip(weights, inputs):
+            out.data += w.data * x.data
+
+        out.data += bias.data
+        return out
+
     def make_topo(self):
         """
         Function that topologically sorts all of the nodes
@@ -126,7 +135,7 @@ class Value:
 
         return topo
 
-    def recompute(self, topo):
+    def recompute(self, topo, null_grads=True):
         """
         Iterate through a topology and recalculate
         the values of the nodes.
@@ -138,14 +147,23 @@ class Value:
         Network class to avoid having to make a new
         graph after updating the parameters.
         """
+
         for node in topo:
             # NOTE: this has to be done, because if not,
             # backprop will keep accumulating gradients
             # which will explode at some point!
-            node.grad = 0
+            if null_grads:
+                node.grad = 0
             match node.op:
                 case None:
                     continue
+                case 'linear':
+                    n = (len(node.children) - 1) // 2
+                    # assign the bias
+                    node.data = node.children[-1].data
+                    # do the linear combination
+                    for w, x in zip(node.children[0:n], node.children[n:2*n]):
+                        node.data += w.data * x.data
                 case '+':
                     node.data = node.children[0].data + node.children[1].data
                 case '*':
@@ -182,6 +200,13 @@ class Value:
             match node.op:
                 case None:
                     continue
+                case 'linear':
+                    n = (len(node.children) - 1) // 2
+                    for w, x in zip(node.children[0:n], node.children[n:2*n]):
+                        w.grad += node.grad * x.data
+                        x.grad += node.grad * w.data
+
+                    node.children[-1].grad += node.grad
                 case '+':
                     node.children[0].grad += node.grad
                     node.children[1].grad += node.grad

@@ -91,12 +91,15 @@ class Neuron:
                 self.activation = Value.exp
 
     def __call__(self, x):
+        """
         # using the value_sum function here is better avoided
         # but it's the same thing
         act = self.b
         for wi, xi in zip(self.w, x):
             act += wi * xi
         return self.activation(act)
+        """
+        return self.activation(Value.linear(self.w, x, self.b))
 
     def parameters(self):
         return self.w + [self.b]
