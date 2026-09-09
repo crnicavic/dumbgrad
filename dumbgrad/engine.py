@@ -82,12 +82,27 @@ class Value:
         return out
 
     @staticmethod
-    def linear(weights, inputs, bias):
-        out = Value(0, 'linear', [*weights, *inputs, bias], label='linear')
+    def linear(weights, inputs, bias=Value(0)):
+        """
+        Static method to create a Value object from arrays of
+        Value object by doing a linear combination.
+
+        The purpose of this operation is to replace the + and *
+        with one operation. The main benefit of this is speed,
+        because the resulting topology results in faster
+        training.
+
+        For weights = [w1, w2, w3], x = [x1, x2, x3] and bias = b
+        this returns a Value objects that holds the data of
+        b + w1 * x1 + w2 * x2 + w3 * x3, and all has all of them
+        as children in the order of:
+        [w1, w2, w3, x1, x2, x3, b]
+        And this allows the grouping of the parameters to be
+        simple, which simplifies the backprop and recompute procedures
+        """
+        out = Value(bias.data, 'linear', [*weights, *inputs, bias], label='linear')
         for w, x in zip(weights, inputs):
             out.data += w.data * x.data
-
-        out.data += bias.data
         return out
 
     def make_topo(self):
@@ -154,6 +169,7 @@ class Value:
             # which will explode at some point!
             if null_grads:
                 node.grad = 0
+            # order the cases by frequency, because python doesnt support jump tables..
             match node.op:
                 case None:
                     continue
@@ -197,6 +213,7 @@ class Value:
         self.grad = 1
 
         for node in reversed(topo):
+            # order the cases by frequency, because python doesnt support jump tables..
             match node.op:
                 case None:
                     continue
