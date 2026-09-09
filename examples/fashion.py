@@ -87,11 +87,11 @@ if __name__ == "__main__":
 
     n = Network([
         Input(len(x_train[0])),
-        Layer(30),
+        Layer(50),
         Layer(30),
         Layer(num_classes, activation="softmax")
     ])
     reg = L2Regularization()
     n.build(seed=0, loss="cross_entropy", regularization=reg)
-    n.train(x_train, y_train, batch_size=10, epochs=10, n_workers=6)
+    n.train(x_train, y_train, batch_size=200, epochs=10, n_workers=6)
     n.test(x_test, y_test, n_workers=2)
