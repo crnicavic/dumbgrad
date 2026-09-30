@@ -82,7 +82,7 @@ class Value:
         return out
 
     @staticmethod
-    def linear(weights, inputs, bias=Value(0)):
+    def linear(weights, inputs, bias):
         """
         Static method to create a Value object from arrays of
         Value object by doing a linear combination.
@@ -100,6 +100,7 @@ class Value:
         And this allows the grouping of the parameters to be
         simple, which simplifies the backprop and recompute procedures
         """
+        bias = bias if isinstance(bias, Value) else Value(bias)
         out = Value(bias.data, 'linear', [*weights, *inputs, bias], label='linear')
         for w, x in zip(weights, inputs):
             out.data += w.data * x.data

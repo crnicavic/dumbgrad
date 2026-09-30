@@ -58,7 +58,7 @@ def gradient_cmp(numgrads, topo):
 
 def test_gradients():
     nn = Network([
-        Input(5),
+        Input(2),
         Layer(5),
         Layer(20),
         Layer(8)
@@ -70,6 +70,7 @@ def test_gradients():
     loss.backprop(topo)
     g = draw_dot(loss)
     g.render(filename="loss", format="png")
+    print(len(numgrads), len(topo))
     assert gradient_cmp(numgrads, topo)
 
 if __name__ == "__main__":
