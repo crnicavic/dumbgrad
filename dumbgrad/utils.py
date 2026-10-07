@@ -223,7 +223,7 @@ def value_sum(arr):
     [Value(0), Value(5), Value(6)]
     """
     total = arr[0]
-    for val in arr:
+    for val in arr[1:]:
         total += val
 
     return total
