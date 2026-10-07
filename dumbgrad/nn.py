@@ -71,12 +71,13 @@ class NoRegularization(Regularization):
 
 class Neuron:
     def __init__(self, input_count, output_count, rng=None, activation="tanh"):
+        # xaviers initialization
         limit = math.sqrt(6 / (input_count + output_count))
-        if rng is None:
-            self.w = [Parameter(random.uniform(-limit, limit), label='w') for _ in range(input_count)]
-        else:
-            self.w = [Parameter(rng.uniform(-limit, limit), label='w') for _ in range(input_count)]
-        self.b = Parameter(0,label='b')
+        # make weight lambda
+        weight = make_weight_lambda(limir, rng)
+
+        self.w = [weight() for _ in range(input_count)]
+        self.b = Parameter(0, label='b')
 
         match activation:
             case "tanh":
@@ -126,6 +127,48 @@ class Layer:
 class Input:
     def __init__(self, size):
         self.size = size
+
+class LSTM:
+    def __init__(self, size):
+        """
+        A pretty simple constructor.
+
+        The thing to note is that size specifies
+        how long the memory vectors and their weight
+        vectors are.
+        """
+        self.size = size
+
+    def build(self, input_count, rng=None):
+        # xaviers initialization
+        limit = math.sqrt(6 / (input_count + output_count))
+        # make weight lambda
+        weight = make_weight_lambda(limir, rng)
+
+        def make_gate_params():
+            # hidden state weights
+            w_h = [[weight() for _ in range(self.size)] for _ in range(self.size)]
+            # input weights
+            w_x = [[weight() for _ in range(input_count)] for _ in range(self.size)]
+            # bias
+            b = [Parameter(0, label='b') for _ in range(self.size)]
+            return w_h, w_x, b
+
+
+        # long term memory
+        self.c_t = [Value(0) for _ in range(self.size)]
+        # hidden state - short term memory
+        self.h_t = [Value(0) for _ in range(self.size)]
+
+        # forget gate
+        self.w_fh, self.w_fx, self.b_f = make_gate_params()
+        # input gate
+        self.w_ih, self.w_ix, self.b_i = make_gate_params()
+        # candidate gate
+        self.w_ch, self.w_cx, self.b_c = make_gate_params()
+        # output gate
+        self.w_oh, self.w_ox, self.b_o = make_gate_params()
+
 
 class Network:
     def __init__(self, layers):

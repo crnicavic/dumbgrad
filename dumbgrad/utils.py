@@ -227,3 +227,9 @@ def value_sum(arr):
         total += val
 
     return total
+
+def make_weight_lambda(limit, rng=None):
+    # generation function
+    rand = random.uniform if rng is None else rng.uniform
+    # create a lambda as sort of a macro to make weights
+    return lambda: Parameter(rand(-limit, limit), label='w')
