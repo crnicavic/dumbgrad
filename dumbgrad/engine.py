@@ -100,6 +100,7 @@ class Value:
         And this allows the grouping of the parameters to be
         simple, which simplifies the backprop and recompute procedures
         """
+        assert len(weights) == len(inputs), "weights and inputs size mismatch"
         bias = bias if isinstance(bias, Value) else Value(bias)
         out = Value(bias.data, 'linear', [*weights, *inputs, bias], label='linear')
         for w, x in zip(weights, inputs):
