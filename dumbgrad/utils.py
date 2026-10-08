@@ -1,4 +1,6 @@
 import itertools
+import random
+from dumbgrad.engine import Parameter
 from math import ceil, floor
 from collections.abc import Iterable
 

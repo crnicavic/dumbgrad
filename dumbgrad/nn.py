@@ -74,7 +74,7 @@ class Neuron:
         # xaviers initialization
         limit = math.sqrt(6 / (input_count + output_count))
         # make weight lambda
-        weight = make_weight_lambda(limir, rng)
+        weight = make_weight_lambda(limit, rng)
 
         self.w = [weight() for _ in range(input_count)]
         self.b = Parameter(0, label='b')
@@ -141,9 +141,9 @@ class LSTM:
 
     def build(self, input_count, rng=None):
         # xaviers initialization
-        limit = math.sqrt(6 / (input_count + output_count))
+        limit = math.sqrt(6 / (input_count + self.size))
         # make weight lambda
-        weight = make_weight_lambda(limir, rng)
+        weight = make_weight_lambda(limit, rng)
 
         def make_gate_params():
             # hidden state weights
@@ -169,14 +169,21 @@ class LSTM:
         # output gate
         self.w_oh, self.w_ox, self.b_o = make_gate_params()
 
+    def __call__(self, x, reset=False):
+        f = [Value.linear(self.w_fh[k] + self.w_fx[k], self.h_t + x, self.b_f).sigmoid() for k in range(self.size)]
+        i = [Value.linear(self.w_ih[k] + self.w_ix[k], self.h_t + x, self.b_i).sigmoid() for k in range(self.size)]
+        c = [Value.linear(self.w_ch[k] + self.w_cx[k], self.h_t + x, self.b_c).tanh() for k in range(self.size)]
+        o = [Value.linear(self.w_oh[k] + self.w_ox[k], self.h_t + x, self.b_o).sigmoid() for k in range(self.size)]
+
+        self.c_t = [(self.c_t[i] * f[i] + i[i] * c[i]).tanh() for i in range(len(self.c_t))]
+        self.h_t = [self.c_t[i] * o[i] for i in range(len(self.h_t))]
+
+        return self.h_t
 
 class Network:
     def __init__(self, layers):
-        #
-        if not isinstance(layers[0], Input):
-            raise TypeError("First layer is not an input!")
+        assert isinstance(layers[0], Input), "First layer is not Input"
         self.layers = layers
-
 
     def __call__(self, x):
         out = [_x if isinstance(_x, Value) else Value(_x) for _x in x]
