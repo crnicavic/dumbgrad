@@ -318,6 +318,25 @@ class Network:
                     grads[i] += params[i].grad
             output_queue.put((loss.data, grads))
 
+    # temporary method to figure out how lstm training works
+    def lstm_train(self, inputs, outputs):
+        """
+        Inputs is a 3D array, where each element is
+        2D array, which itself is an array of sequences.
+
+        Each sequence is an array of the states of the inputs
+        """
+        losses = []
+        # build complete graph on one sequence
+        placeholders_x = [[Value(col) for col in row] for row in inputs[0]]
+        placeholders_y = [[Value(col) for col in row] for row in outputs[0]]
+        for x in inputs[0]:
+            y_pred = [self(x) for x in placeholders_x]
+            loss = self.loss(placeholders_y, y_pred) + self.regularization(self.weights())
+            losses.append(loss)
+
+
+
     def test(self, inputs, outputs, n_workers=1):
         start_time = time.perf_counter()
 
