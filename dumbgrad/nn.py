@@ -24,6 +24,12 @@ def cross_entropy(_y, _y_pred):
 
     return value_sum(ent)
 
+def make_weight_lambda(limit, rng=None):
+    # generation function
+    rand = random.uniform if rng is None else rng.uniform
+    # create a lambda as sort of a macro to make weights
+    return lambda: Parameter(rand(-limit, limit), label='w')
+
 class Parameter(Value):
     __slots__ = ('m', 'v')
     def __init__(self, data, op=None, children=[], label=''):
@@ -170,13 +176,13 @@ class LSTM:
         self.w_oh, self.w_ox, self.b_o = make_gate_params()
 
     def __call__(self, x, reset=False):
-        f = [Value.linear(self.w_fh[k] + self.w_fx[k], self.h_t + x, self.b_f).sigmoid() for k in range(self.size)]
-        i = [Value.linear(self.w_ih[k] + self.w_ix[k], self.h_t + x, self.b_i).sigmoid() for k in range(self.size)]
-        c = [Value.linear(self.w_ch[k] + self.w_cx[k], self.h_t + x, self.b_c).tanh() for k in range(self.size)]
-        o = [Value.linear(self.w_oh[k] + self.w_ox[k], self.h_t + x, self.b_o).sigmoid() for k in range(self.size)]
+        f = [Value.linear(self.w_fh[k] + self.w_fx[k], self.h_t + x, self.b_f[k]).sigmoid() for k in range(self.size)]
+        i = [Value.linear(self.w_ih[k] + self.w_ix[k], self.h_t + x, self.b_i[k]).sigmoid() for k in range(self.size)]
+        c = [Value.linear(self.w_ch[k] + self.w_cx[k], self.h_t + x, self.b_c[k]).tanh() for k in range(self.size)]
+        o = [Value.linear(self.w_oh[k] + self.w_ox[k], self.h_t + x, self.b_o[k]).sigmoid() for k in range(self.size)]
 
-        self.c_t = [(self.c_t[i] * f[i] + i[i] * c[i]).tanh() for i in range(len(self.c_t))]
-        self.h_t = [self.c_t[i] * o[i] for i in range(len(self.h_t))]
+        self.c_t = [(self.c_t[k] * f[k] + i[k] * c[k]).tanh() for k in range(len(self.c_t))]
+        self.h_t = [self.c_t[k] * o[k] for k in range(len(self.h_t))]
 
         return self.h_t
 
