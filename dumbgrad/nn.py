@@ -176,6 +176,11 @@ class LSTM:
         self.w_oh, self.w_ox, self.b_o = make_gate_params()
 
     def __call__(self, x, reset=False):
+        if reset:
+            for short_mem, long_mem in zip(self.c_t, self.h_t):
+                self.c_t[:] = [Value(0) for _ in range(self.size)]
+                self.h_t[:] = [Value(0) for _ in range(self.size)]
+
         f = [Value.linear(self.w_fh[k] + self.w_fx[k], self.h_t + x, self.b_f[k]).sigmoid() for k in range(self.size)]
         i = [Value.linear(self.w_ih[k] + self.w_ix[k], self.h_t + x, self.b_i[k]).sigmoid() for k in range(self.size)]
         c = [Value.linear(self.w_ch[k] + self.w_cx[k], self.h_t + x, self.b_c[k]).tanh() for k in range(self.size)]
@@ -185,6 +190,26 @@ class LSTM:
         self.h_t = [self.c_t[k] * o[k] for k in range(len(self.h_t))]
 
         return self.h_t
+
+    def parameters(self):
+        parameter_matrices = [
+            self.w_fh, self.w_fx, self.b_f,
+            self.w_ih, self.w_ix, self.b_i,
+            self.w_ch, self.w_cx, self.b_c,
+            self.w_oh, self.w_ox, self.b_o
+        ]
+
+        parameters = []
+        for p in parameter_matrices:
+            try:
+                p.append(flatten(p))
+            except:
+                p.append(p)
+        print(p)
+        return p
+
+    def weights(self):
+        return list(flatten(self.w_fh + self.w_fx + self.w_ih + self.w_ix + self.w_ch + self.w_cx + self.w_oh + self.w_ox))
 
 class Network:
     def __init__(self, layers):
@@ -300,6 +325,7 @@ class Network:
         params = self.parameters()
         grads = [0 for _ in range(len(params))]
 
+        # TODO: ADD ALTERNATIVE CONDITIONS TO AVOID LOCKING
         while True:
             recv_params = input_queue.get()
             if recv_params is None:
@@ -319,10 +345,11 @@ class Network:
             output_queue.put((loss.data, grads))
 
     # temporary method to figure out how lstm training works
-    def lstm_train(self, inputs, outputs):
+    def lstm_train(self, inputs, outputs, epochs=10):
         """
-        Inputs is a 3D array, where each element is
-        2D array, which itself is an array of sequences.
+        Inputs is a 3D array, where each element is a sequence.
+        In a sequence is an array of the network inputs, so that
+        the LSTM network can be trained with that.
 
         Each sequence is an array of the states of the inputs
         """
@@ -335,6 +362,18 @@ class Network:
             loss = self.loss(placeholders_y, y_pred) + self.regularization(self.weights())
             losses.append(loss)
 
+        total_loss = value_sum(losses)
+        topo = total_loss.make_topo()
+        params = self.parameters()
+        for t in range(1, epochs+1):
+            for input_seq, output_seq in zip(inputs, outputs):
+                update_placeholders(placeholders_x, input_seq)
+                update_placeholders(placeholders_y, output_seq)
+                total_loss.recompute(topo)
+                total_loss.backprop(topo)
+                print(f"loss in epoch {t}: {total_loss.data}")
+                for p in params:
+                    self.optimizer(p, t)
 
 
     def test(self, inputs, outputs, n_workers=1):
