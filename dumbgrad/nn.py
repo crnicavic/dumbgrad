@@ -191,25 +191,19 @@ class LSTM:
 
         return self.h_t
 
-    def parameters(self):
-        parameter_matrices = [
-            self.w_fh, self.w_fx, self.b_f,
-            self.w_ih, self.w_ix, self.b_i,
-            self.w_ch, self.w_cx, self.b_c,
-            self.w_oh, self.w_ox, self.b_o
-        ]
-
-        parameters = []
-        for p in parameter_matrices:
-            try:
-                p.append(flatten(p))
-            except:
-                p.append(p)
-        print(p)
-        return p
-
     def weights(self):
-        return list(flatten(self.w_fh + self.w_fx + self.w_ih + self.w_ix + self.w_ch + self.w_cx + self.w_oh + self.w_ox))
+        return [w for w_matrix in
+                [
+                    self.w_fh, self.w_fx,
+                    self.w_ih, self.w_ix,
+                    self.w_ch, self.w_cx,
+                    self.w_oh, self.w_ox
+                ]
+                for w in flat_iter(w_matrix)
+            ]
+
+    def parameters(self):
+        return self.weights() + self.b_f + self.b_i + self.b_c + self.b_o
 
 class Network:
     def __init__(self, layers):
@@ -345,7 +339,7 @@ class Network:
             output_queue.put((loss.data, grads))
 
     # temporary method to figure out how lstm training works
-    def lstm_train(self, inputs, outputs, epochs=10):
+    def lstm_train(self, inputs, outputs, epochs=100):
         """
         Inputs is a 3D array, where each element is a sequence.
         In a sequence is an array of the network inputs, so that
@@ -357,24 +351,27 @@ class Network:
         # build complete graph on one sequence
         placeholders_x = [[Value(col) for col in row] for row in inputs[0]]
         placeholders_y = [[Value(col) for col in row] for row in outputs[0]]
-        for x in inputs[0]:
-            y_pred = [self(x) for x in placeholders_x]
+        for x in placeholders_x:
+            y_pred = [self(x)]
             loss = self.loss(placeholders_y, y_pred) + self.regularization(self.weights())
             losses.append(loss)
 
-        total_loss = value_sum(losses)
-        topo = total_loss.make_topo()
+        # loss during training on a sequence
+        seq_loss = value_sum(losses)
+        topo = seq_loss.make_topo()
         params = self.parameters()
         for t in range(1, epochs+1):
+            total_loss = 0
             for input_seq, output_seq in zip(inputs, outputs):
                 update_placeholders(placeholders_x, input_seq)
                 update_placeholders(placeholders_y, output_seq)
-                total_loss.recompute(topo)
-                total_loss.backprop(topo)
-                print(f"loss in epoch {t}: {total_loss.data}")
+                seq_loss.recompute(topo)
+                seq_loss.backprop(topo)
                 for p in params:
                     self.optimizer(p, t)
+                total_loss += seq_loss.data
 
+            print(f"loss in epoch {t}: {total_loss}")
 
     def test(self, inputs, outputs, n_workers=1):
         start_time = time.perf_counter()

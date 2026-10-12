@@ -1,11 +1,25 @@
 from dumbgrad.nn import *
 from dumbgrad.utils import *
 
+def create_lstm(lstm_size, input_count):
+    lstm = LSTM(lstm_size)
+    lstm.build(input_count, rng=random.Random(0))
+    return lstm
+
+def test_lstm_weights():
+    lstm = create_lstm(10, 5)
+    weights = lstm.weights()
+    assert all([isinstance(w, Parameter) for w in weights])
+
+def test_lstm_parameters():
+    lstm = create_lstm(10, 5)
+    parameters = lstm.parameters()
+    assert all([isinstance(p, Parameter) for p in parameters])
+
 def test_lstm_sanity():
     input_count = 5
     lstm_size = 10
-    lstm = LSTM(lstm_size)
-    lstm.build(input_count, rng=random.Random(0))
+    lstm = create_lstm(lstm_size, input_count)
     sequences = [
         [
             [Value(0) for _ in range(input_count)],
@@ -40,9 +54,18 @@ def test_lstm_train():
         Layer(output_count)
     ])
 
-    n.build(seed=0)
+    opt = Optimizer(lr=0.01)
+    n.build(seed=0, optimizer=opt)
     n.lstm_train(x, y)
 
+    n.layers[0].c_t[:] = [Value(0) for _ in range(lstm_size)]
+    n.layers[0].h_t[:] = [Value(0) for _ in range(lstm_size)]
+    for x in sequences[0]:
+        out = n(x)
+        print(f"argmax: {argmax(out)}, raw: {out}")
+
 if __name__ == "__main__":
-    test_lstm_train()
+    test_lstm_weights()
+    test_lstm_parameters()
     test_lstm_sanity()
+    test_lstm_train()
