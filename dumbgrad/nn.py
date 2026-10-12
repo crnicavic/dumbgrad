@@ -351,9 +351,10 @@ class Network:
         # build complete graph on one sequence
         placeholders_x = [[Value(col) for col in row] for row in inputs[0]]
         placeholders_y = [[Value(col) for col in row] for row in outputs[0]]
-        for x in placeholders_x:
-            y_pred = [self(x)]
-            loss = self.loss(placeholders_y, y_pred) + self.regularization(self.weights())
+        for x, y in zip(placeholders_x, placeholders_y):
+            y_pred = self(x)
+            # loss flattens implicitly, so pack additional time to avoid errors
+            loss = self.loss([y], [y_pred]) + self.regularization(self.weights())
             losses.append(loss)
 
         # loss during training on a sequence

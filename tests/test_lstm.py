@@ -43,8 +43,8 @@ def test_lstm_train():
         [[int(i == (input_count-1-j)) for i in range(input_count)] for j in range(input_count)]
     ]
 
-    x = sequences
-    y = [
+    inputs = sequences
+    outputs = [
         sequence[1:] + [[0 for _ in range(input_count)]]
     for sequence in sequences]
 
@@ -56,13 +56,15 @@ def test_lstm_train():
 
     opt = Optimizer(lr=0.01)
     n.build(seed=0, optimizer=opt)
-    n.lstm_train(x, y)
+    n.lstm_train(inputs, outputs)
 
-    n.layers[0].c_t[:] = [Value(0) for _ in range(lstm_size)]
-    n.layers[0].h_t[:] = [Value(0) for _ in range(lstm_size)]
-    for x in sequences[0]:
-        out = n(x)
-        print(f"argmax: {argmax(out)}, raw: {out}")
+    for input_sequence, output_sequence in zip(inputs, outputs):
+        n.layers[0].c_t[:] = [Value(0) for _ in range(lstm_size)]
+        n.layers[0].h_t[:] = [Value(0) for _ in range(lstm_size)]
+        for x, y in zip(input_sequence, output_sequence):
+            out = n(x)
+            print(out, y)
+            assert all([abs(p.data - o) < 0.5 for p, o in zip(out, y)])
 
 if __name__ == "__main__":
     test_lstm_weights()
