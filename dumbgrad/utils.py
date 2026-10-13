@@ -79,30 +79,53 @@ def argmax(arr):
             m = i
     return m
 
-def unique(arr):
+def unique(arr, per_character=False):
     """
     Returns a dictionary with each unique value
     in an array, where each key is the value of the
     array, and the dictionary value is the number of
     occurances
 
-    For an array:
-    [1 1 4 5 9 1 9]
+    For an array: [1 1 4 5 9 1 9]
     return dictionary would be:
     {
-    1: 3
-    4: 1
-    5: 1
-    9: 2
+        1: 3
+        4: 1
+        5: 1
+        9: 2
     }
+
+    If the input is an array of strings,
+    the output dictionary can be controlled
+    with the per_character flag.
+
+    For the array of strings:
+    [ "aaaa", "bbbb", "cccc"]
+    If the per_character flag is True, the output is:
+    {
+        a: 4,
+        b: 4,
+        c: 4,
+    }
+    Or if it is set to False, the output is:
+    {
+        aaaa: 1
+        bbbb: 1
+        cccc: 1
+    }
+
+    In other words, the flag controls whether to count
+    unique strings, or to count unique characters within
+    the strings.
     """
     unique = {}
-    for a in arr:
-        if a in unique:
-            unique[a] += 1
-        else:
-            unique[a] = 1
 
+    # combine the strings into one if per character counting is needed
+    if per_character:
+        arr = ''.join(arr)
+
+    for a in arr:
+        unique[a] = unique.get(a, 0) + 1
     return unique
 
 def make_batches(inputs, outputs, batch_size):
