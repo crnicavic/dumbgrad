@@ -3,20 +3,23 @@ import random
 from math import ceil, floor
 from collections.abc import Iterable
 
-def to_categorical(y, num_classes):
+def to_categorical(y):
     """
-    Convert "regular" array to one-hot encoded matrix
+    Convert "regular" array of ints to one-hot encoded matrix.
 
     Something like:
     [4, 2, 0]
 
     Will be converted to:
     [
-      [0 0 0 0 1],
-      [0 0 1 0 0],
-      [1 0 0 0 0]
+        [0 0 0 0 1],
+        [0 0 1 0 0],
+        [1 0 0 0 0]
     ]
+    In other words, the 4, 2, 0 respond to the
+    indices in each of the arrays of the result.
     """
+    num_classes = max(y) + 1
     batch_size = len(y)
     categorical = [[0 for _j in range(num_classes)] for _i in range(batch_size)]
     for _i, _y in enumerate(y):
@@ -29,15 +32,72 @@ def from_categorical(y):
 
     Something like:
     [
-      [0 0 0 0 1],
-      [0 0 1 0 0],
-      [1 0 0 0 0]
+        [0 0 0 0 1],
+        [0 0 1 0 0],
+        [1 0 0 0 0]
     ]
     Will be converted to:
     [4, 2, 0]
     """
     return [argmax(row) for row in y]
-    
+
+def encode_labels(arr, sort=True, per_character=False):
+    """
+    Convert an array of labels into a one-hot encoded matrix.
+
+    Something like:
+    "abcd"
+    gets converted into
+    [
+        [1 0 0 0],
+        [0 1 0 0],
+        [0 0 1 0],
+        [0 0 0 1]
+    ]
+
+    This differs from to_categorical because it looks
+    at the number of unique values, not the raw numbers.
+
+    The way it works is that all unique values are
+    mapped to an index, and then to_categorical is
+    called to one hot encode those indices.
+
+    The sort flag is used to set if the keys should be sorted,
+    or should the keys be indexed as they come.
+
+    The string "dcba" can be converted into:
+    [
+        [0 0 0 1]
+        [0 0 1 0]
+        [0 1 0 0]
+        [1 0 0 0]
+    ]
+    if sort=True
+    OR
+    [
+        [1 0 0 0]
+        [0 1 0 0]
+        [0 0 1 0]
+        [0 0 0 1]
+    ]
+    if sort=False
+
+    The difference here is that the unique values were sorted
+    or not. In other words, for sort=True, 'a' was mapped in
+    the first index, and for sort=False, 'd' was mapped in the
+    first index because it appeared first.
+    """
+    uniques = unique(arr, per_character)
+    if sort:
+        uniques = sorted(uniques)
+
+    num_classes = len(uniques)
+    # create a mapping for every character
+    class_keys = {k: i for i, k in enumerate(uniques)}
+    # form an array of those indices
+    encoding = [class_keys[a] for a in arr]
+    return to_categorical(encoding)
+
 
 def normalize(x, per_column=False):
     """

@@ -80,10 +80,10 @@ if __name__ == "__main__":
 
     num_classes = len(unique(test_labels))
     x_train = normalize(train_images)
-    y_train = to_categorical(train_labels, num_classes)
+    y_train = to_categorical(train_labels)
 
     x_test = normalize(test_images)
-    y_test = to_categorical(test_labels, num_classes)
+    y_test = to_categorical(test_labels)
 
     n = Network([
         Input(len(x_train[0])),

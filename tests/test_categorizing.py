@@ -6,17 +6,15 @@ def test_to_categorical():
     class_count = 20
     y = [random.randint(0, class_count-1) for _ in range(1000)]
     np_categorical = np.eye(class_count)[y]
-    my_categorical = to_categorical(y, class_count)
+    my_categorical = to_categorical(y)
     for i in range(len(y)):
         assert argmax(np_categorical[i]) == argmax(my_categorical[i])
 
 
 def test_from_categorical():
     y = sorted([random.randint(0, 100) for _ in range(10000)])
-    # y uniques
-    y_uniq = unique(y)
     # y categorical
-    y_c = to_categorical(y, len(y_uniq))
+    y_c = to_categorical(y)
     # y non categorical
     y_nc = from_categorical(y_c)
 

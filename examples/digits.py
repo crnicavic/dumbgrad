@@ -9,7 +9,7 @@ if __name__ == "__main__":
     x, y = dataset.data.tolist(), dataset.target.tolist()
     normalize(x)
     num_classes = len(unique(y))
-    y = to_categorical(y, num_classes=num_classes)
+    y = to_categorical(y)
     x_train, x_test, y_train, y_test = train_test_split(x, y, test_size=0.3, shuffle=True, random_state=0)
 
     n = Network([

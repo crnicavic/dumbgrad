@@ -1,3 +1,6 @@
+"""
+Tests to verify basic LSTM functions
+"""
 from dumbgrad.nn import *
 from dumbgrad.utils import *
 
