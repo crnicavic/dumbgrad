@@ -3,6 +3,95 @@ import random
 from math import ceil, floor
 from collections.abc import Iterable
 
+def normalize(x, per_column=False):
+    """
+    Iterate through the entirety of the input and normalize
+    in accordance to the formula:
+    (x - lo) / (hi - lo)
+    where:
+     - lo is the minimum of the target
+     - hi is the maximum of the target
+
+    If the per column flag is True, the hi and lo
+    are calculated per column, and then each column
+    is normalized separetely.
+    Useful when each feature has it's own magnitude of size.
+    """
+    scale = lambda val, lo, hi: (val - lo) / (hi - lo)
+    if per_column == True:
+        # list(zip(*x)) inverts the rows and columns
+        # in other words it gives the transpose
+        transposed = list(zip(*x))
+        los = [min(col) for col in transposed]
+        his = [max(col) for col in transposed]
+        return [[scale(x_, lo, hi) for x_, lo, hi in zip(row, los, his)] for row in x]
+    else:
+        lo = min(flatten(x))
+        hi = max(flatten(x))
+        return [[scale(x_, lo, hi) for x_ in row] for row in x]
+
+def flat_iter(ndarr):
+    return itertools.chain.from_iterable(ndarr)
+
+def flatten(ndarr):
+    return list(itertools.chain.from_iterable(ndarr))
+
+def argmax(arr):
+    m = 0
+    for i in range(1, len(arr)):
+        if arr[i] > arr[m]:
+            m = i
+    return m
+
+def unique(arr, per_character=False):
+    """
+    Returns a dictionary with each unique value
+    in an array, where each key is the value of the
+    array, and the dictionary value is the number of
+    occurances
+
+    For an array: [1 1 4 5 9 1 9]
+    return dictionary would be:
+    {
+        1: 3
+        4: 1
+        5: 1
+        9: 2
+    }
+
+    If the input is an array of strings,
+    the output dictionary can be controlled
+    with the per_character flag.
+
+    For the array of strings:
+    [ "aaaa", "bbbb", "cccc"]
+    If the per_character flag is True, the output is:
+    {
+        a: 4,
+        b: 4,
+        c: 4,
+    }
+    Or if it is set to False, the output is:
+    {
+        aaaa: 1
+        bbbb: 1
+        cccc: 1
+    }
+
+    In other words, the flag controls whether to count
+    unique strings, or to count unique characters within
+    the strings.
+    """
+    unique = {}
+
+    # combine the strings into one if per character counting is needed
+    if per_character:
+        arr = ''.join(arr)
+
+    for a in arr:
+        unique[a] = unique.get(a, 0) + 1
+    return unique
+
 def to_categorical(y):
     """
     Convert "regular" array of ints to one-hot encoded matrix.
@@ -95,98 +184,13 @@ def encode_labels(arr, sort=True, per_character=False):
     # create a mapping for every character
     class_keys = {k: i for i, k in enumerate(uniques)}
     # form an array of those indices
-    encoding = [class_keys[a] for a in arr]
-    return to_categorical(encoding)
-
-
-def normalize(x, per_column=False):
-    """
-    Iterate through the entirety of the input and normalize
-    in accordance to the formula:
-    (x - lo) / (hi - lo)
-    where:
-     - lo is the minimum of the target
-     - hi is the maximum of the target
-
-    If the per column flag is True, the hi and lo
-    are calculated per column, and then each column
-    is normalized separetely.
-    Useful when each feature has it's own magnitude of size.
-    """
-    scale = lambda val, lo, hi: (val - lo) / (hi - lo)
-    if per_column == True:
-        # list(zip(*x)) inverts the rows and columns
-        # in other words it gives the transpose
-        transposed = list(zip(*x))
-        los = [min(col) for col in transposed]
-        his = [max(col) for col in transposed]
-        return [[scale(x_, lo, hi) for x_, lo, hi in zip(row, los, his)] for row in x]
-    else:
-        lo = min(flatten(x))
-        hi = max(flatten(x))
-        return [[scale(x_, lo, hi) for x_ in row] for row in x]
-
-def flat_iter(ndarr):
-    return itertools.chain.from_iterable(ndarr)
-
-def flatten(ndarr):
-    return list(itertools.chain.from_iterable(ndarr))
-
-def argmax(arr):
-    m = 0
-    for i in range(1, len(arr)):
-        if arr[i] > arr[m]:
-            m = i
-    return m
-
-def unique(arr, per_character=False):
-    """
-    Returns a dictionary with each unique value
-    in an array, where each key is the value of the
-    array, and the dictionary value is the number of
-    occurances
-
-    For an array: [1 1 4 5 9 1 9]
-    return dictionary would be:
-    {
-        1: 3
-        4: 1
-        5: 1
-        9: 2
-    }
-
-    If the input is an array of strings,
-    the output dictionary can be controlled
-    with the per_character flag.
-
-    For the array of strings:
-    [ "aaaa", "bbbb", "cccc"]
-    If the per_character flag is True, the output is:
-    {
-        a: 4,
-        b: 4,
-        c: 4,
-    }
-    Or if it is set to False, the output is:
-    {
-        aaaa: 1
-        bbbb: 1
-        cccc: 1
-    }
-
-    In other words, the flag controls whether to count
-    unique strings, or to count unique characters within
-    the strings.
-    """
-    unique = {}
-
-    # combine the strings into one if per character counting is needed
     if per_character:
         arr = ''.join(arr)
 
-    for a in arr:
-        unique[a] = unique.get(a, 0) + 1
-    return unique
+    encoding = [class_keys[a] for a in arr]
+
+    return to_categorical(encoding)
+
 
 def make_batches(inputs, outputs, batch_size):
     """

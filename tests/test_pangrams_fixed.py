@@ -55,13 +55,16 @@ def test_pangram():
     assert len(uniq) == len(ALPHABET) + 2
 
 def test_lstm_pangram():
+    # the mappings have to be consistent between inputs and outputs
+    encoded_pangrams = encode_labels(PANGRAMS, per_character=True)
+    print(encoded_pangrams)
     # inputs are everything but the end character
-    inputs = [encode_labels(p[:-1]) for p in PANGRAMS]
+    inputs = [encoded_pangram[:-1] for encoded_pangram in encoded_pangrams]
     # outputs is everything without the first character
-    outputs = [encode_labels(p[1:]) for p in PANGRAMS]
+    outputs = [encoded_pangram[1:] for encoded_pangram in encoded_pangrams]
 
-    uniq = unique(PANGRAMS)
-    input_count = len(PANGRAMS)
+    uniq = unique(PANGRAMS, per_character=True)
+    input_count = len(uniq)
     output_count = input_count
     lstm_size = 10
     n = Network([
