@@ -185,11 +185,10 @@ def encode_labels(arr, sort=True, per_character=False):
     class_keys = {k: i for i, k in enumerate(uniques)}
     # form an array of those indices
     if per_character:
-        arr = ''.join(arr)
-
-    encoding = [class_keys[a] for a in arr]
-
-    return to_categorical(encoding)
+       return [to_categorical([class_keys[char] for char in s]) for s in arr]
+    else:
+        encoding = [class_keys[a] for a in arr]
+        return to_categorical(encoding)
 
 
 def make_batches(inputs, outputs, batch_size):

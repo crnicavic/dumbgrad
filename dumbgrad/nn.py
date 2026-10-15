@@ -210,10 +210,13 @@ class Network:
         assert isinstance(layers[0], Input), "First layer is not Input"
         self.layers = layers
 
-    def __call__(self, x):
+    def __call__(self, x, reset=False):
         out = [_x if isinstance(_x, Value) else Value(_x) for _x in x]
         for l in self.layers:
-            out = l(out)
+            if isinstance(l, LSTM) and reset:
+                out = l(out, reset)
+            else:
+                out = l(out)
         return out
 
     def parameters(self):
