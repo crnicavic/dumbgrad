@@ -345,35 +345,92 @@ class Network:
     def lstm_train(self, inputs, outputs, epochs=100):
         """
         Inputs is a 3D array, where each element is a sequence.
-        In a sequence is an array of the network inputs, so that
-        the LSTM network can be trained with that.
+        A sequence is a 2D array, where every element is an array
+        of numbers that are the network inputs for that element.
 
-        Each sequence is an array of the states of the inputs
+        Outputs is the same except that it is the expected
+        output for each neuron.
+
+        For example if the LSTM needs to be trained on some strings:
+        ["abcd", "dcba", "bacd"]
+        This first needs to be converted to one-hot encoded data.
+        This can be done with encode_labels function from utils.py
+        And would look like:
+        [
+            [
+                [1 0 0 0], [0 1 0 0], [0 0 1 0], [0 0 0 1], #abcd
+            ],
+            [
+                [0 0 0 1], [0 0 1 0], [0 1 0 0], [1 0 0 0], #dcba
+            ],
+            [
+                [0 1 0 0], [1 0 0 0], [0 0 1 0], [0 0 0 1], #bacd
+            ]
+        ]
+
+        The way the training works is that it calls the proper operations
+        once, and calculates the loss. The way that works is that it uses
+        a topology, which is an array of all the nodes, and each node is
+        added into the topology once all of it's children are. That allows
+        for safe recomputation.
+
+        Now since LSTM's require backprops through time, loss is calculated
+        in a way that contains the loss of each timestep. That way, one
+        backprop and one recompute do everything.
+
+        The hurdle with this approach is handling variable sequence lengths.
+        This is solved by building the entire graph only for the longest
+        sequence, storing the loss of each timestep, and calling recompute
+        and backprop only up until the timestep i actually need.
+
+        The trick to doing that is to make sure that the topology is consistent.
+        In other words, to make sure that all of the nodes of the last timestep
+        come before the nodes of the current timestep. That is avchieved by
+        a running sum. During graph building a sum is made. That way all of
+        the losses are included in one topology, and in a way where i can
+        extract the loss of a certain timestep in a way that is independent
+        of previous timesteps.
+
+        The code for this is simple. But understanding it takes a little
+        more effort.
         """
+        longest_seq_index = argmax([len(i) for i in inputs])
+        longest_input = inputs[longest_seq_index]
+        longest_output = outputs[longest_seq_index]
         losses = []
         # build complete graph on one sequence
-        placeholders_x = [[Value(col) for col in row] for row in inputs[0]]
-        placeholders_y = [[Value(col) for col in row] for row in outputs[0]]
+        placeholders_x = [[Value(col) for col in row] for row in longest_input]
+        placeholders_y = [[Value(col) for col in row] for row in longest_output]
+        seq_loss = None
         for x, y in zip(placeholders_x, placeholders_y):
             y_pred = self(x)
             # loss flattens implicitly, so pack additional time to avoid errors
             loss = self.loss([y], [y_pred]) + self.regularization(self.weights())
-            losses.append(loss)
+            # all the nodes from the previous loss have to be in the topo
+            # before adding the new loss
+            if seq_loss is None:
+                seq_loss = loss
+            else:
+                seq_loss += loss
+            losses.append(seq_loss)
 
         # loss during training on a sequence
-        seq_loss = value_sum(losses)
         topo = seq_loss.make_topo()
+        topo_positions = {node: topo.index(node) for node in losses}
         params = self.parameters()
         for t in range(1, epochs+1):
             total_loss = 0
             for input_seq, output_seq in zip(inputs, outputs):
+                # even if placeholders is longer, the extras get ingored
                 update_placeholders(placeholders_x, input_seq)
                 update_placeholders(placeholders_y, output_seq)
-                seq_loss.recompute(topo)
-                seq_loss.backprop(topo)
+                # get the loss for the length of the current sequence
+                loss = losses[len(input_seq) - 1]
+                loss.recompute(topo[:topo_positions[loss]+1])
+                loss.backprop(topo[:topo_positions[loss]+1])
                 for p in params:
                     self.optimizer(p, t)
-                total_loss += seq_loss.data
+                total_loss += loss.data
 
             print(f"loss in epoch {t}: {total_loss}")
 
