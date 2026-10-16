@@ -200,7 +200,7 @@ class LSTM:
                     self.w_oh, self.w_ox
                 ]
                 for w in flat_iter(w_matrix)
-            ]
+                ]
 
     def parameters(self):
         return self.weights() + self.b_f + self.b_i + self.b_c + self.b_o
@@ -261,20 +261,23 @@ class Network:
         assert batch_size > 0 and batch_size <= len(outputs), "bad batch_size!"
         start_time = time.perf_counter()
 
-        input_batches, output_batches = make_batches(inputs, outputs, batch_size)
+        # if an LSTM network is trained, dont batch
+        if not any([isinstance(l, LSTM) for l in self.layers]):
+            inputs, outputs = make_batches(inputs, outputs, batch_size)
+
 
         # don't create more processes than batches
-        batch_count = math.floor(len(inputs)/batch_size)
+        batch_count = math.floor(len(inputs))
         n_workers = n_workers if batch_count > n_workers else batch_count
 
         input_queues = [mp.Queue() for _ in range(n_workers)]
         output_queues = [mp.Queue() for _ in range(n_workers)]
-        split_input_batches = array_split(input_batches, n_workers)
-        split_output_batches = array_split(output_batches, n_workers)
+        split_inputs = array_split(inputs, n_workers)
+        split_outputs = array_split(outputs, n_workers)
 
         processes = [mp.Process(target=self.training_worker,
-                                args=(split_input_batches[i],
-                                      split_output_batches[i],
+                                args=(split_inputs[i],
+                                      split_outputs[i],
                                       output_queues[i],
                                       input_queues[i]
                                       ),
@@ -330,7 +333,7 @@ class Network:
 
             for p, p_new in zip(params, recv_params):
                 p.data = p_new.data
-            grads[:] = [0 for _ in grads]
+                grads[:] = [0 for _ in grads]
 
             for input_batch, output_batch in zip(inputs, outputs):
                 update_placeholders(placeholders_x, input_batch)
@@ -339,7 +342,7 @@ class Network:
                 loss.backprop(topo)
                 for i in range(len(grads)):
                     grads[i] += params[i].grad
-            output_queue.put((loss.data, grads))
+                    output_queue.put((loss.data, grads))
 
     # temporary method to figure out how lstm training works
     def lstm_train(self, inputs, outputs, epochs=100):
