@@ -175,32 +175,38 @@ class LSTM:
         # output gate
         self.w_oh, self.w_ox, self.b_o = make_gate_params()
 
+    def gate(self, w_h, w_x, h_t, x, b, activation):
+        return [
+            activation(Value.linear(w_h[k] + w_x[k], h_t + x, b[k]))
+            for k in range(self.size)
+        ]
+
     def __call__(self, x, reset=False):
         if reset:
-            for short_mem, long_mem in zip(self.c_t, self.h_t):
-                self.c_t[:] = [Value(0) for _ in range(self.size)]
-                self.h_t[:] = [Value(0) for _ in range(self.size)]
+            self.c_t[:] = [Value(0) for _ in range(self.size)]
+            self.h_t[:] = [Value(0) for _ in range(self.size)]
 
-        f = [Value.linear(self.w_fh[k] + self.w_fx[k], self.h_t + x, self.b_f[k]).sigmoid() for k in range(self.size)]
-        i = [Value.linear(self.w_ih[k] + self.w_ix[k], self.h_t + x, self.b_i[k]).sigmoid() for k in range(self.size)]
-        c = [Value.linear(self.w_ch[k] + self.w_cx[k], self.h_t + x, self.b_c[k]).tanh() for k in range(self.size)]
-        o = [Value.linear(self.w_oh[k] + self.w_ox[k], self.h_t + x, self.b_o[k]).sigmoid() for k in range(self.size)]
+        f = self.gate(self.w_fh, self.w_fx, self.h_t, x, self.b_f, Value.sigmoid)
+        i = self.gate(self.w_ih, self.w_ix, self.h_t, x, self.b_i, Value.sigmoid)
+        c = self.gate(self.w_ch, self.w_cx, self.h_t, x, self.b_c, Value.tanh)
+        o = self.gate(self.w_oh, self.w_ox, self.h_t, x, self.b_o, Value.sigmoid)
 
-        self.c_t = [(self.c_t[k] * f[k] + i[k] * c[k]).tanh() for k in range(len(self.c_t))]
-        self.h_t = [self.c_t[k] * o[k] for k in range(len(self.h_t))]
+        self.c_t = [c_t * f[k] + i[k] * c[k] for k, c_t in enumerate(self.c_t)]
+        self.h_t = [c_t.tanh() * o[k] for k, c_t in enumerate(self.c_t)]
 
         return self.h_t
 
     def weights(self):
-        return [w for w_matrix in
-                [
-                    self.w_fh, self.w_fx,
-                    self.w_ih, self.w_ix,
-                    self.w_ch, self.w_cx,
-                    self.w_oh, self.w_ox
-                ]
-                for w in flat_iter(w_matrix)
-                ]
+        return [
+            w for w_matrix in
+            [
+                self.w_fh, self.w_fx,
+                self.w_ih, self.w_ix,
+                self.w_ch, self.w_cx,
+                self.w_oh, self.w_ox
+            ]
+            for w in flat_iter(w_matrix)
+        ]
 
     def parameters(self):
         return self.weights() + self.b_f + self.b_i + self.b_c + self.b_o
