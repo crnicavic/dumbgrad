@@ -96,6 +96,8 @@ class Neuron:
                 self.activation = Value.leaky_relu
             case "softmax":
                 self.activation = Value.exp
+            case _:
+                raise ValueError("Unknown neuron activation!")
 
     def __call__(self, x):
         # the output of a neuron is a linear combination
@@ -215,12 +217,15 @@ class Network:
     def __init__(self, layers):
         if not isinstance(layers[0], Input):
             raise TypeError("First layer is not of type Input")
+
+        self.is_recurrent = any([isinstance(l, LSTM) for l in layers])
+
         self.layers = layers
 
     def __call__(self, x, reset=False):
         out = [_x if isinstance(_x, Value) else Value(_x) for _x in x]
         for l in self.layers:
-            if isinstance(l, LSTM) and reset:
+            if self.is_recurrent and reset:
                 out = l(out, reset)
             else:
                 out = l(out)
@@ -341,13 +346,12 @@ class Network:
         start_time = time.perf_counter()
 
         # if an LSTM network is trained, dont batch
-        if not any([isinstance(l, LSTM) for l in self.layers]):
+        if not self.is_recurrent:
             inputs, outputs = make_batches(inputs, outputs, batch_size)
 
 
         # don't create more processes than batches
-        batch_count = math.floor(len(inputs))
-        n_workers = n_workers if batch_count > n_workers else batch_count
+        n_workers = min(n_workers, len(inputs))
 
         input_queues = [mp.Queue() for _ in range(n_workers)]
         output_queues = [mp.Queue() for _ in range(n_workers)]
@@ -442,11 +446,9 @@ class Network:
         placeholders_x = [[Value(col) for col in row] for row in longest_input]
         placeholders_y = [[Value(col) for col in row] for row in longest_output]
         seq_loss = None
-        reset = True
 
-        for x, y in zip(placeholders_x, placeholders_y):
-            y_pred = self(x, reset=reset)
-            reset = False
+        for t, (x, y) in enumerate(zip(placeholders_x, placeholders_y)):
+            y_pred = self(x, reset=t==0)
             # loss flattens implicitly, so pack additional time to avoid errors
             loss = self.loss([y], [y_pred])
             # all the nodes from the previous loss have to be in the topo
