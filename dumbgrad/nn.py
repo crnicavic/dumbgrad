@@ -213,7 +213,8 @@ class LSTM:
 
 class Network:
     def __init__(self, layers):
-        assert isinstance(layers[0], Input), "First layer is not Input"
+        if not isinstance(layers[0], Input):
+            raise TypeError("First layer is not of type Input")
         self.layers = layers
 
     def __call__(self, x, reset=False):
@@ -241,10 +242,20 @@ class Network:
         else:
             rng = None
 
-        if loss == "sum_of_squares" or loss is None:
-            self.loss = sum_of_squares
-        elif loss == "cross_entropy":
+        # loss doesnt have configurable parameters, it doesnt need a class
+        if loss == "cross_entropy":
             self.loss = cross_entropy
+        elif loss == "sum_of_squares":
+            self.loss = sum_of_squares
+        else:
+            raise ValueError(
+                f"""
+                Loss function invalid: {loss}
+                    currently supported values:
+                        sum_of_squares
+                        cross_entropy
+                """
+            )
 
         if optimizer is None:
             self.optimizer = Optimizer()
@@ -323,8 +334,10 @@ class Network:
         from the workers, and after finding the new parameter values,
         it sends them to the workers.
         """
-        assert len(inputs) == len(outputs), "Input and output size mismatch!"
-        assert batch_size > 0 and batch_size <= len(outputs), "bad batch_size!"
+        if len(inputs) == len(outputs):
+            raise ValueError("Input and output size mismatch!")
+        if batch_size > 0 and batch_size <= len(outputs):
+            raise ValueError("bad batch_size!")
         start_time = time.perf_counter()
 
         # if an LSTM network is trained, dont batch
