@@ -72,7 +72,7 @@ def test_lstm_fixed_len_pangrams():
     ])
     opt = Optimizer(lr=0.01)
     n.build(seed=0, optimizer=opt)
-    n.lstm_train(inputs, outputs, epochs=20)
+    n.train(inputs, outputs, epochs=50, n_workers=4)
 
     correct_count = 0
     total_count = len(outputs[0]) * len(outputs)
@@ -106,7 +106,7 @@ def test_lstm_variable_len_pangrams():
     ])
     opt = Optimizer(lr=0.01)
     n.build(seed=0, optimizer=opt)
-    n.lstm_train(inputs, outputs, epochs=20)
+    n.train(inputs, outputs, epochs=50, n_workers=4)
 
     correct_count = 0
     total_count = sum(len(o) for o in outputs)

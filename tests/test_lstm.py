@@ -132,7 +132,7 @@ def test_lstm_train():
         is_network_good = test_by_hand()
         seed += 1
     # train
-    n.lstm_train(inputs, outputs)
+    n.train(inputs, outputs, epochs=150, n_workers=2)
     # if the assertion passes the network is fine
     assert test_by_hand()
     # since the network was bad, then training worked!

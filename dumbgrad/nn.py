@@ -257,6 +257,66 @@ class Network:
         self.layers.pop(0)
 
     def train(self, inputs, outputs, batch_size=1, epochs=10, n_workers=1):
+        """
+        Method for training the entire network.
+
+        Inputs and outputs are arguments for the training dataset.
+        The shape of the dataset depends on the type of network
+        being trained:
+
+        In the case of a regular feedforward network, a 2D array
+        is required. The first dimension are the samples, and the
+        second dimension are the per-neuron inputs. In other words
+        the dataset is an array of per neuron inputs.
+
+        For example if the network needs to be trained the XOR logical
+        function, the inputs and outputs work be, respectively:
+        Inputs:  [ [0 0], [1 0], [0 1], [1 1] ]
+        Outputs: [ [1 0], [0 1], [0 1], [1 0] ]
+        Where the first element of each output is if the result of XOR
+        is zero, and the second element is if the result of XOR is one.
+
+        In the case of a recurrent network, a 3D array is required.
+        It represents an array of sequencies it needs to learn.
+        A sequence is an array of samples (where each sample is
+        an array of network inputs).
+
+        For example if the LSTM needs to be trained on some strings:
+        ["abcd", "dcba", "bacd"]
+        This first needs to be converted to one-hot encoded data.
+        This can be done with encode_labels function from utils.py
+        And would look like:
+        [
+            [
+                [1 0 0 0], [0 1 0 0], [0 0 1 0], [0 0 0 1], #abcd
+            ],
+            [
+                [0 0 0 1], [0 0 1 0], [0 1 0 0], [1 0 0 0], #dcba
+            ],
+            [
+                [0 1 0 0], [1 0 0 0], [0 0 1 0], [0 0 0 1], #bacd
+            ]
+        ]
+
+        batch_size is an integer that splits the inputs and outputs
+        into batches of the specified size, which adds another dimension
+        to the data. BATCHING IS DISABLED FOR RECURRENT NETWORKS! That
+        is because the data is already "batched" into sequences. And
+        because a dimension is added, that means the data is the same shape
+        for both recurrent networks, and regular ones, which has the benefit
+        of not requiring special code for the recurrent case.
+
+        epochs specifies how many time training will be repeated on the data.
+
+        n_workers specifies how many parallel threads will be created in
+        order to speed up training.
+
+        This method formats the data, by batching it (if necessary), then
+        initializes the workers, that actually do the learning. After the
+        workers are started, this method gets the gradients and losses
+        from the workers, and after finding the new parameter values,
+        it sends them to the workers.
+        """
         assert len(inputs) == len(outputs), "Input and output size mismatch!"
         assert batch_size > 0 and batch_size <= len(outputs), "bad batch_size!"
         start_time = time.perf_counter()
@@ -317,65 +377,26 @@ class Network:
         print(f"training time on {len(outputs)} samples with {n_workers} workers: {training_time}s")
 
     def training_worker(self, inputs, outputs, input_queue, output_queue):
-        placeholders_x = [[Value(col) for col in row] for row in inputs[0]]
-        placeholders_y = [[Value(col) for col in row] for row in outputs[0]]
-        y_pred = [self(x) for x in placeholders_x]
-        loss = self.loss(placeholders_y, y_pred) + self.regularization(self.weights())
-        topo = loss.make_topo()
-        params = self.parameters()
-        grads = [0 for _ in range(len(params))]
-
-        # TODO: ADD ALTERNATIVE CONDITIONS TO AVOID LOCKING
-        while True:
-            recv_params = input_queue.get()
-            if recv_params is None:
-                break
-
-            for p, p_new in zip(params, recv_params):
-                p.data = p_new.data
-                grads[:] = [0 for _ in grads]
-
-            for input_batch, output_batch in zip(inputs, outputs):
-                update_placeholders(placeholders_x, input_batch)
-                update_placeholders(placeholders_y, output_batch)
-                loss.recompute(topo)
-                loss.backprop(topo)
-                for i in range(len(grads)):
-                    grads[i] += params[i].grad
-                    output_queue.put((loss.data, grads))
-
-    # temporary method to figure out how lstm training works
-    def lstm_train(self, inputs, outputs, epochs=100):
         """
-        Inputs is a 3D array, where each element is a sequence.
-        A sequence is a 2D array, where every element is an array
-        of numbers that are the network inputs for that element.
+        The way the training works is that it calls the network operations,
+        and calculates the loss. This is done to "find out" how to get
+        that result, and then just repeats that.
 
-        Outputs is the same except that it is the expected
-        output for each neuron.
+        Every Value object has a children and operation fields, that store
+        the values and the operation used to create it.
 
-        For example if the LSTM needs to be trained on some strings:
-        ["abcd", "dcba", "bacd"]
-        This first needs to be converted to one-hot encoded data.
-        This can be done with encode_labels function from utils.py
-        And would look like:
-        [
-            [
-                [1 0 0 0], [0 1 0 0], [0 0 1 0], [0 0 0 1], #abcd
-            ],
-            [
-                [0 0 0 1], [0 0 1 0], [0 1 0 0], [1 0 0 0], #dcba
-            ],
-            [
-                [0 1 0 0], [1 0 0 0], [0 0 1 0], [0 0 0 1], #bacd
-            ]
-        ]
+        After getting the loss as a Value object, it is iterated through
+        the children and a topologically sorted array of all the nodes
+        is created in way where every node is added to the topology only
+        after all of it's children.
 
-        The way the training works is that it calls the proper operations
-        once, and calculates the loss. The way that works is that it uses
-        a topology, which is an array of all the nodes, and each node is
-        added into the topology once all of it's children are. That allows
-        for safe recomputation.
+        With that, the data of the nodes can be changed, and after calling
+        recompute, all of the nodes will be updated accordingly. That also
+        allows for the backpropagation to be simple. So all the training
+        loop does it holds an array of Value objects that are going to be
+        changed, namely the inputs and expected outputs, which are updated
+        for each sample, and then the loss is recomputed and gradients are
+        calculated once again.
 
         Now since LSTM's require backprops through time, loss is calculated
         in a way that contains the loss of each timestep. That way, one
@@ -393,9 +414,6 @@ class Network:
         the losses are included in one topology, and in a way where i can
         extract the loss of a certain timestep in a way that is independent
         of previous timesteps.
-
-        The code for this is simple. But understanding it takes a little
-        more effort.
         """
         longest_seq_index = argmax([len(i) for i in inputs])
         longest_input = inputs[longest_seq_index]
@@ -405,24 +423,38 @@ class Network:
         placeholders_x = [[Value(col) for col in row] for row in longest_input]
         placeholders_y = [[Value(col) for col in row] for row in longest_output]
         seq_loss = None
+        reset = True
+
         for x, y in zip(placeholders_x, placeholders_y):
-            y_pred = self(x)
+            y_pred = self(x, reset=reset)
+            reset = False
             # loss flattens implicitly, so pack additional time to avoid errors
-            loss = self.loss([y], [y_pred]) + self.regularization(self.weights())
+            loss = self.loss([y], [y_pred])
             # all the nodes from the previous loss have to be in the topo
             # before adding the new loss
             if seq_loss is None:
-                seq_loss = loss
+                seq_loss = loss + self.regularization(self.weights())
             else:
                 seq_loss += loss
             losses.append(seq_loss)
 
         # loss during training on a sequence
         topo = seq_loss.make_topo()
-        topo_positions = {node: topo.index(node) for node in losses}
+        # make lookup table for indices
+        topo_positions = {node: i for i, node in enumerate(topo)}
         params = self.parameters()
-        for t in range(1, epochs+1):
+        grads = [0 for _ in range(len(params))]
+        # TODO: ADD ALTERNATIVE CONDITIONS TO AVOID LOCKING
+        while True:
+            recv_params = input_queue.get()
+            if recv_params is None:
+                break
+
+            for p, p_new in zip(params, recv_params):
+                p.data = p_new.data
+            grads[:] = [0 for _ in grads]
             total_loss = 0
+
             for input_seq, output_seq in zip(inputs, outputs):
                 # even if placeholders is longer, the extras get ingored
                 update_placeholders(placeholders_x, input_seq)
@@ -431,11 +463,10 @@ class Network:
                 loss = losses[len(input_seq) - 1]
                 loss.recompute(topo[:topo_positions[loss]+1])
                 loss.backprop(topo[:topo_positions[loss]+1])
-                for p in params:
-                    self.optimizer(p, t)
+                for i in range(len(grads)):
+                    grads[i] += params[i].grad
                 total_loss += loss.data
-
-            print(f"loss in epoch {t}: {total_loss}")
+            output_queue.put((total_loss, grads))
 
     def test(self, inputs, outputs, n_workers=1):
         start_time = time.perf_counter()
