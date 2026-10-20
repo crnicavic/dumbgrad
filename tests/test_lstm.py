@@ -93,15 +93,6 @@ def test_lstm_train():
     and after training to check if the network actually learned
     something.
     """
-    def test_by_hand():
-        for input_sequence, output_sequence in zip(inputs, outputs):
-            n.layers[0].c_t[:] = [Value(0) for _ in range(lstm_size)]
-            n.layers[0].h_t[:] = [Value(0) for _ in range(lstm_size)]
-            for x, y in zip(input_sequence, output_sequence):
-                out = n(x)
-                if not all([abs(p.data - o) < 0.5 for p, o in zip(out, y)]):
-                    return False
-        return True
     input_count = 5
     lstm_size = 10
     output_count = input_count
@@ -124,17 +115,16 @@ def test_lstm_train():
 
     opt = Optimizer(lr=0.01)
     # ensure that the created network is NOT GOOD!
-    is_network_good = True
+    is_network_good = False
     seed = 0
-    while is_network_good:
+    while not is_network_good:
         n.build(seed=0, optimizer=opt)
         # check if the network is actually bad
-        is_network_good = test_by_hand()
+        is_network_good = n.test(inputs, outputs)
         seed += 1
     # train
     n.train(inputs, outputs, epochs=150, n_workers=2)
-    # if the assertion passes the network is fine
-    assert test_by_hand()
+    assert n.test(inputs, outputs) >= 1.0
     # since the network was bad, then training worked!
     print("Network learned something!")
 

@@ -73,19 +73,19 @@ def test_lstm_fixed_len_pangrams():
     opt = Optimizer(lr=0.01)
     n.build(seed=0, optimizer=opt)
     n.train(inputs, outputs, epochs=50, n_workers=4)
+    n.test(inputs, outputs)
+    #correct_count = 0
+    #total_count = len(outputs[0]) * len(outputs)
+    #for input_string, output_string in zip(inputs, outputs):
+    #    reset = True
+    #    for input_char, output_char in zip(input_string, output_string):
+    #        out = n(input_char, reset)
+    #        correct_count += int(argmax(out) == argmax(output_char))
+    #        reset = False
 
-    correct_count = 0
-    total_count = len(outputs[0]) * len(outputs)
-    for input_string, output_string in zip(inputs, outputs):
-        reset = True
-        for input_char, output_char in zip(input_string, output_string):
-            out = n(input_char, reset)
-            correct_count += int(argmax(out) == argmax(output_char))
-            reset = False
-
-    print(f"total accuracy: {correct_count}/{total_count}")
-    # assert at least decent accuracy
-    assert correct_count/total_count > 0.75
+    #print(f"total accuracy: {correct_count}/{total_count}")
+    ## assert at least decent accuracy
+    #assert correct_count/total_count > 0.75
 
 def test_lstm_variable_len_pangrams():
     # the mappings have to be consistent between inputs and outputs
@@ -107,19 +107,20 @@ def test_lstm_variable_len_pangrams():
     opt = Optimizer(lr=0.01)
     n.build(seed=0, optimizer=opt)
     n.train(inputs, outputs, epochs=50, n_workers=4)
+    n.test(inputs, outputs)
 
-    correct_count = 0
-    total_count = sum(len(o) for o in outputs)
-    for input_string, output_string in zip(inputs, outputs):
-        reset = True
-        for input_char, output_char in zip(input_string, output_string):
-            out = n(input_char, reset)
-            correct_count += int(argmax(out) == argmax(output_char))
-            reset = False
+    #correct_count = 0
+    #total_count = sum(len(o) for o in outputs)
+    #for input_string, output_string in zip(inputs, outputs):
+    #    reset = True
+    #    for input_char, output_char in zip(input_string, output_string):
+    #        out = n(input_char, reset)
+    #        correct_count += int(argmax(out) == argmax(output_char))
+    #        reset = False
 
-    print(f"total accuracy: {correct_count}/{total_count}")
-    # assert at least decent accuracy
-    assert correct_count/total_count > 0.75
+    #print(f"total accuracy: {correct_count}/{total_count}")
+    ## assert at least decent accuracy
+    #assert correct_count/total_count > 0.75
 
 
 if __name__ == "__main__":

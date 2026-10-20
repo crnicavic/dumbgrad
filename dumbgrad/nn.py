@@ -225,7 +225,7 @@ class Network:
     def __call__(self, x, reset=False):
         out = [_x if isinstance(_x, Value) else Value(_x) for _x in x]
         for l in self.layers:
-            if self.is_recurrent and reset:
+            if isinstance(l, LSTM) and reset:
                 out = l(out, reset)
             else:
                 out = l(out)
@@ -339,16 +339,15 @@ class Network:
         from the workers, and after finding the new parameter values,
         it sends them to the workers.
         """
-        if len(inputs) == len(outputs):
+        if len(inputs) != len(outputs):
             raise ValueError("Input and output size mismatch!")
-        if batch_size > 0 and batch_size <= len(outputs):
+        if batch_size <= 0 and batch_size > len(outputs):
             raise ValueError("bad batch_size!")
         start_time = time.perf_counter()
 
         # if an LSTM network is trained, dont batch
         if not self.is_recurrent:
             inputs, outputs = make_batches(inputs, outputs, batch_size)
-
 
         # don't create more processes than batches
         n_workers = min(n_workers, len(inputs))
@@ -385,7 +384,7 @@ class Network:
             print(f"loss in epoch {t}: {sum(losses)}")
             # apply averaged gradients
             for p, g in zip(params, list(zip(*grads))):
-                p.grad = sum(g)/batch_count
+                p.grad = sum(g)/n_workers
 
             for p in params:
                 self.optimizer(p, t)
@@ -397,7 +396,8 @@ class Network:
             p.join()
 
         training_time = time.perf_counter() - start_time
-        print(f"training time on {len(outputs)} samples with {n_workers} workers: {training_time}s")
+        total_len = sum([len(o) for o in outputs])
+        print(f"training time on {total_len} samples with {n_workers} workers: {training_time}s")
 
     def training_worker(self, inputs, outputs, input_queue, output_queue):
         """
@@ -492,6 +492,11 @@ class Network:
     def test(self, inputs, outputs, n_workers=1):
         start_time = time.perf_counter()
 
+        # pad with dimension for feedforward nets
+        if not self.is_recurrent:
+            inputs = [[i] for i in inputs]
+            outputs = [[o] for o in outputs]
+
         # don't create more processes than there are samples
         n_workers = n_workers if len(inputs) > n_workers else len(inputs)
         split_inputs = array_split(inputs, n_workers)
@@ -501,7 +506,7 @@ class Network:
                                 args=(split_inputs[i],
                                       split_outputs[i],
                                       queue),
-                                name=f"training_worker{i}"
+                                name=f"testing_worker{i}"
                                 )
                      for i in range(n_workers)]
 
@@ -517,10 +522,11 @@ class Network:
         for p in processes:
             p.join()
 
-        accuracy = total_correct / len(outputs)
+        total_len = sum(len(o) for o in outputs)
+        accuracy = total_correct / total_len
         print(f"total accuracy: {accuracy}")
         testing_time = time.perf_counter() - start_time
-        print(f"testing time on {len(outputs)} samples with {n_workers} workers: {testing_time}s")
+        print(f"testing time on {total_len} samples with {n_workers} workers: {testing_time}s")
         return accuracy
 
 
@@ -536,14 +542,22 @@ class Network:
         and then calling recompute, it is possible to do very
         fast predictions whilst using very little memory
         """
-        placeholders_x = [Value(i) for i in inputs[0]]
-        pred = self(placeholders_x)
-        dummy = Value(0, children=pred)
+        longest_seq_index = argmax([len(i) for i in inputs])
+        longest_input = inputs[longest_seq_index]
+        placeholders_x = [[Value(col) for col in row] for row in longest_input]
+        dummy = Value(0)
+        preds = []
+        for t, x in enumerate(placeholders_x):
+            pred = self(x, reset=t==0)
+            preds.append(pred)
+            dummy.children.extend(pred)
+
         topo = dummy.make_topo()
         correct_count = 0
-        for i in range(len(inputs)):
-            update_placeholders(placeholders_x, inputs[i])
+        for input_seq, output_seq in zip(inputs, outputs):
+            update_placeholders(placeholders_x, input_seq)
             dummy.recompute(topo)
-            correct_count += int(argmax([p.data for p in pred]) == argmax(outputs[i]))
+            for pred, out in zip(preds, output_seq):
+                correct_count += int(argmax([p.data for p in pred]) == argmax(out))
 
         queue.put(correct_count)
