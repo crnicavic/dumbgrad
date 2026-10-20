@@ -3,10 +3,10 @@ import math
 
 class Value:
     __slots__ = ('data', 'grad', 'children', 'op', 'label')
-    def __init__(self, data, op=None, children=[], label=''):
+    def __init__(self, data, op=None, children=None, label=''):
         self.data = data
         self.grad = 0 # what is the derrivative of the output by this variable
-        self.children = children
+        self.children = children if children is not None else []
         self.op = op
         self.label = label
 
@@ -100,7 +100,8 @@ class Value:
         And this allows the grouping of the parameters to be
         simple, which simplifies the backprop and recompute procedures
         """
-        assert len(weights) == len(inputs), "weights and inputs size mismatch"
+        if len(weights) != len(inputs):
+            raise ValueError("weights and inputs size mismatch")
         bias = bias if isinstance(bias, Value) else Value(bias)
         out = Value(bias.data, 'linear', [*weights, *inputs, bias], label='linear')
         for w, x in zip(weights, inputs):
