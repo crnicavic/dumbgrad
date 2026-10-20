@@ -92,7 +92,7 @@ def unique(arr, per_character=False):
         unique[a] = unique.get(a, 0) + 1
     return unique
 
-def to_categorical(y):
+def to_categorical(y, num_classes=None):
     """
     Convert "regular" array of ints to one-hot encoded matrix.
 
@@ -108,7 +108,8 @@ def to_categorical(y):
     In other words, the 4, 2, 0 respond to the
     indices in each of the arrays of the result.
     """
-    num_classes = max(y) + 1
+    if num_classes is None:
+        num_classes = max(y) + 1
     batch_size = len(y)
     categorical = [[0 for _j in range(num_classes)] for _i in range(batch_size)]
     for _i, _y in enumerate(y):
@@ -185,7 +186,7 @@ def encode_labels(arr, sort=True, per_character=False):
     class_keys = {k: i for i, k in enumerate(uniques)}
     # form an array of those indices
     if per_character:
-       return [to_categorical([class_keys[char] for char in s]) for s in arr]
+       return [to_categorical([class_keys[char] for char in s], num_classes) for s in arr]
     else:
         encoding = [class_keys[a] for a in arr]
         return to_categorical(encoding)

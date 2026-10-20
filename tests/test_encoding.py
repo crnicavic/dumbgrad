@@ -2,15 +2,26 @@ import random
 import numpy as np
 from dumbgrad.utils import *
 
-def verify_encoding(test_sequence):
-    encoded_labels = encode_labels(test_sequence)
+def verify_encoding(test_sequence, per_character=False):
+    encoded_labels = encode_labels(test_sequence, per_character=per_character)
     assert len(test_sequence) == len(encoded_labels)
+    # if the per character flag is used, the result will be a 3d matrix of labels
+    # which needs to be flattened
+    if per_character:
+        encoded_labels = [
+            label for sequence in encoded_labels
+            for label in sequence
+        ]
+        test_sequence = ''.join(test_sequence)
     # exactly 1 1 in each element?
     assert all([label.count(1) == 1 for label in encoded_labels])
+    # everything else is zero?
     assert all([label.count(0) == (len(label) -1) for label in encoded_labels])
+    # all the one hot labels have the same size?
+    assert all([len(l1) == len(l2) for l1, l2 in zip(encoded_labels, encoded_labels[1:])])
 
-    # check if the mapping is consistent
-    get_sequence_mapping(test_sequence, encoded_labels)
+    # check if the mapping is consistent (function does it implicitly)
+    _ = get_sequence_mapping(test_sequence, encoded_labels)
 
 def get_sequence_mapping(sequence, labels):
     """
@@ -58,9 +69,111 @@ def test_encoding_sorting():
     # verify that the mappings are different
     assert any([unsorted_mapping[u] != sorted_mapping[s] for u, s in zip(unsorted_mapping, sorted_mapping)])
 
+def test_encoding_pangrams():
+    pangrams = [
+        "Fix problem quickly with galvanized jets",
+        "The quick brown fox jumps over the lazy dog",
+        "Waxy and quivering, jocks fumble the pizza",
+        "When zombies arrive, quickly fax judge Pat",
+        "The jay, pig, fox, zebra, and my wolves quacked",
+        "Wizard's job is to vex chumps quickly in fog",
+        "Heavy boxes perform quick waltzes and jig",
+        "Pack my tan box with five dozen liquor jugs",
+        "Jackdaws love my big sphinx made of quartz",
+        "Pack my box with five dozen big liquor jugs",
+    ]
+    verify_encoding(pangrams, per_character=True)
 
+def test_encoding_strings():
+    strings = [
+        "Alpine Linux",
+        "AlmaLinux",
+        "Amazon Linux",
+        "Antergos",
+        "antiX",
+        "ArcoLinux",
+        "Arch Linux",
+        "Asahi Linux",
+        "BackTrack",
+        "Bedrock Linux",
+        "BlackArch",
+        "Bodhi Linux",
+        "CachyOS",
+        "CentOS",
+        "CentOS Stream",
+        "ChromeOS",
+        "Clear Linux",
+        "CRUX",
+        "Debian",
+        "deepin",
+        "Devuan",
+        "Edubuntu",
+        "elementary OS",
+        "EndeavourOS",
+        "Fedora",
+        "Fedora Silverblue",
+        "Fire OS",
+        "Garuda Linux",
+        "Gentoo Linux",
+        "GNU Guix System",
+        "GrapheneOS",
+        "KDE neon",
+        "Kali Linux",
+        "Knoppix",
+        "Kubuntu",
+        "Kylin",
+        "LibreSphere",
+        "LineageOS",
+        "Linux From Scratch",
+        "Linux Mint",
+        "Linux Mint Debian Edition",
+        "Lubuntu",
+        "Mageia",
+        "Mandriva Linux",
+        "Manjaro",
+        "MX Linux",
+        "Nitrux",
+        "NixOS",
+        "openKylin",
+        "openSUSE Leap",
+        "openSUSE Tumbleweed",
+        "Oracle Linux",
+        "Parabola GNU/Linux-libre",
+        "Parrot OS",
+        "Pentoo",
+        "Peppermint OS",
+        "Pop!_OS",
+        "Porteus",
+        "Puppy Linux",
+        "PureOS",
+        "Qubes OS",
+        "Red Hat Enterprise Linux",
+        "Rocky Linux",
+        "ROSA Linux",
+        "Salix",
+        "Scientific Linux",
+        "Slackware",
+        "Slax",
+        "SteamOS",
+        "SUSE Linux Enterprise",
+        "Tails",
+        "Trisquel GNU/Linux",
+        "Ubuntu",
+        "Ubuntu MATE",
+        "Ubuntu Studio",
+        "Ubuntu Unity",
+        "Ultramarine Linux",
+        "Void Linux",
+        "VyOS",
+        "Xubuntu",
+        "Zentyal",
+        "Zorin OS",
+    ]
+    verify_encoding(strings, per_character=True)
 
 if __name__ == "__main__":
     test_encoding_sanity()
     test_encoding_integers()
     test_encoding_sorting()
+    test_encoding_pangrams()
+    test_encoding_strings()
