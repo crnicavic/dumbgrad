@@ -32,7 +32,7 @@ def make_weight_lambda(limit, rng=None):
 
 class Parameter(Value):
     __slots__ = ('m', 'v')
-    def __init__(self, data, op=None, children=[], label=''):
+    def __init__(self, data, op=None, children=None, label=''):
         super().__init__(data, op, children, label)
         self.m = 0
         self.v = 0
@@ -278,7 +278,7 @@ class Network:
 
         self.layers.pop(0)
 
-    def train(self, inputs, outputs, batch_size=1, epochs=10, n_workers=1):
+    def train(self, inputs, outputs, batch_size=1, epochs=10, n_workers=1, max_time=None):
         """
         Method for training the entire network.
 
@@ -341,8 +341,9 @@ class Network:
         """
         if len(inputs) != len(outputs):
             raise ValueError("Input and output size mismatch!")
-        if batch_size <= 0 and batch_size > len(outputs):
+        if batch_size <= 0 or batch_size > len(outputs):
             raise ValueError("bad batch_size!")
+
         start_time = time.perf_counter()
 
         # if an LSTM network is trained, dont batch
@@ -357,15 +358,18 @@ class Network:
         split_inputs = array_split(inputs, n_workers)
         split_outputs = array_split(outputs, n_workers)
 
-        processes = [mp.Process(target=self.training_worker,
-                                args=(split_inputs[i],
-                                      split_outputs[i],
-                                      output_queues[i],
-                                      input_queues[i]
-                                      ),
-                                name=f"training_worker{i}"
-                                )
-                     for i in range(n_workers)]
+        processes = [
+            mp.Process(target=self.training_worker,
+                       args=(split_inputs[i],
+                             split_outputs[i],
+                             output_queues[i],
+                             input_queues[i]
+                             ),
+                       daemon=True,
+                       name=f"training_worker{i}"
+                       )
+            for i in range(n_workers)
+        ]
 
         for p in processes:
             p.start()
@@ -374,17 +378,25 @@ class Network:
         params = self.parameters()
 
         for t in range(1, epochs+1):
+            if max_time is not None:
+                time_left = max_time - (time.perf_counter() - start_time)
+            else:
+                time_left = None
+
             for output_queue in output_queues:
                 output_queue.put(params)
 
             # each message is a tuple of (loss, [gradients])
-            messages = [input_queue.get() for input_queue in input_queues]
+            messages = [
+                input_queue.get(timeout=time_left)
+                for input_queue in input_queues
+            ]
 
             losses, grads = map(list, zip(*messages))
             print(f"loss in epoch {t}: {sum(losses)}")
             # apply averaged gradients
             for p, g in zip(params, list(zip(*grads))):
-                p.grad = sum(g)/n_workers
+                p.grad = sum(g)/len(inputs)
 
             for p in params:
                 self.optimizer(p, t)

@@ -110,6 +110,9 @@ def to_categorical(y, num_classes=None):
     """
     if num_classes is None:
         num_classes = max(y) + 1
+
+    if num_classes < max(y) + 1:
+        raise ValueError(f"number of classes({max(y)+1}) exceededs forced value ({num_classes})")
     batch_size = len(y)
     categorical = [[0 for _j in range(num_classes)] for _i in range(batch_size)]
     for _i, _y in enumerate(y):

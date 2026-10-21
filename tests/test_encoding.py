@@ -61,7 +61,7 @@ def test_encoding_sorting():
     unsorted_labels = encode_labels(test_string, sort=False)
     # if the sorted string is different than the unsorted one
     # the mappings will be different
-    if test_string == sorted(test_string):
+    if list(test_string) == sorted(test_string):
         return
 
     unsorted_mapping = get_sequence_mapping(test_string, unsorted_labels)

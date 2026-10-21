@@ -6,6 +6,7 @@ class Value:
     def __init__(self, data, op=None, children=None, label=''):
         self.data = data
         self.grad = 0 # what is the derrivative of the output by this variable
+        # avoid mutable default arguments gotcha
         self.children = children if children is not None else []
         self.op = op
         self.label = label
