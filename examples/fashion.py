@@ -4,7 +4,6 @@ from dumbgrad.utils import *
 
 import os
 
-
 def try_download(url, dest_path):
     import gzip
     import requests
