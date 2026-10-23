@@ -1,4 +1,3 @@
-import numpy as np
 import math
 
 class Value:
@@ -183,7 +182,9 @@ class Value:
                     node.data = node.children[-1].data
                     # do the linear combination
                     for w, x in zip(node.children[0:n], node.children[n:2*n]):
-                        node.data += w.data * x.data
+                        # skip multiply by zero
+                        if x.data:
+                            node.data += w.data * x.data
                 case '+':
                     node.data = node.children[0].data + node.children[1].data
                 case '*':
@@ -224,7 +225,9 @@ class Value:
                 case 'linear':
                     n = (len(node.children) - 1) // 2
                     for w, x in zip(node.children[0:n], node.children[n:2*n]):
-                        w.grad += node.grad * x.data
+                        # skip multiply by zero
+                        if x.data:
+                            w.grad += node.grad * x.data
                         x.grad += node.grad * w.data
 
                     node.children[-1].grad += node.grad
