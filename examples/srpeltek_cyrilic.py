@@ -50,8 +50,9 @@ if __name__ == "__main__":
     n = Network([
         Input(input_count),
         LSTM(lstm_size),
-        Layer(output_count)
+        Layer(output_count, activation="softmax")
     ])
     opt = Optimizer(lr=0.01)
-    n.build(seed=0, optimizer=opt)
+    n.build(seed=0, optimizer=opt, loss="cross_entropy")
     n.train(inputs, outputs, epochs=50, n_workers=4)
+    n.test(inputs, outputs, n_workers=4)

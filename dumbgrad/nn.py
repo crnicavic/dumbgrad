@@ -239,7 +239,7 @@ class Network:
 
     def build(self,
               seed=None,
-              loss="sum_of_squares",
+              loss=None,
               optimizer=None,
               regularization=None):
         if seed is not None:
