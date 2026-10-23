@@ -384,7 +384,7 @@ class Network:
                 time_left = None
 
             for output_queue in output_queues:
-                output_queue.put(params)
+                output_queue.put([p.data for p in params])
 
             # each message is a tuple of (loss, [gradients])
             messages = [
@@ -484,7 +484,7 @@ class Network:
                 break
 
             for p, p_new in zip(params, recv_params):
-                p.data = p_new.data
+                p.data = p_new
             grads[:] = [0 for _ in grads]
             total_loss = 0
 
