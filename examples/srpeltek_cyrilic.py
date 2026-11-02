@@ -46,7 +46,7 @@ if __name__ == "__main__":
     input_count = len(uniq)
     output_count = input_count
 
-    lstm_size = 50
+    lstm_size = 150
     n = Network([
         Input(input_count),
         LSTM(lstm_size),
@@ -54,5 +54,5 @@ if __name__ == "__main__":
     ])
     opt = Optimizer(lr=0.01)
     n.build(seed=0, optimizer=opt, loss="cross_entropy")
-    n.train(inputs, outputs, epochs=50, n_workers=4)
-    n.test(inputs, outputs, n_workers=4)
+    n.train(inputs, outputs, epochs=50, n_workers=6)
+    n.test(inputs, outputs, n_workers=6)
