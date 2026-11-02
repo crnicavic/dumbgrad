@@ -4,7 +4,7 @@ import math
 import random
 import time
 import multiprocessing as mp
-import copy
+import json
 
 def sum_of_squares(_y, _y_pred):
     y = flat_iter(_y)
@@ -219,7 +219,7 @@ class Network:
             raise TypeError("First layer is not of type Input")
 
         self.is_recurrent = any([isinstance(l, LSTM) for l in layers])
-
+        self.input_count = layers[0].size
         self.layers = layers
 
     def __call__(self, x, reset=False):
@@ -573,3 +573,76 @@ class Network:
                 correct_count += int(argmax([p.data for p in pred]) == argmax(out))
 
         queue.put(correct_count)
+
+    def save(self, path):
+        network_data = {}
+        network_data["optimizer"] = {
+            "omega1": self.optimizer.omega1,
+            "omega2": self.optimizer.omega2,
+            "lr": self.optimizer.lr,
+            "eps": self.optimizer.eps
+        }
+        network_data["regularization"] = {
+            "type": self.regularization.__class__.__name__,
+            "alpha": self.regularization.alpha
+        }
+        network_data["loss"] = self.loss.__name__
+        network_data["layers"] = [{
+            "type": "Input",
+            "size": self.input_count
+        }]
+        for l in self.layers:
+            layer_data = {}
+            layer_data["type"] = l.__class__.__name__
+            layer_data["size"] = l.size
+            if not isinstance(l, LSTM):
+                layer_data["activation"] = l.activation
+
+            network_data["layers"].append(layer_data)
+
+        network_data["parameters"] = [p.data for p in self.parameters()]
+
+        f = open(path, 'w', encoding="utf-8")
+        json.dump(network_data, f, indent=4)
+
+
+    @staticmethod
+    def load(path):
+        f = open(path, 'r', encoding="utf-8")
+        network_data = json.load(f)
+        optimizer_data = network_data["optimizer"]
+        opt = Optimizer(
+            optimizer_data["omega1"],
+            optimizer_data["omega2"],
+            optimizer_data["lr"],
+            optimizer_data["eps"]
+        )
+        # string to constructor dictionary
+        regularization_classes = {
+            "L1Regularization": L1Regularization,
+            "L2Regularization": L2Regularization,
+            "NoRegularization": NoRegularization
+        }
+        regularization_data = network_data["regularization"]
+        reg = regularization_classes[regularization_data["type"]]
+
+        layers_data = network_data["layers"]
+        layer_classes = {
+            "Input": Input,
+            "Layer": Layer,
+            "LSTM": LSTM
+        }
+        layers = []
+        for l in layers_data:
+            if "activation" in l:
+                layer = layer_classes[l["type"]](l["size"], l["activation"])
+            else:
+                layer = layer_classes[l["type"]](l["size"])
+            layers.append(layer)
+
+        n = Network(layers)
+        n.build(loss=network_data["loss"], optimizer=opt, regularization=reg)
+        parameters = n.parameters()
+        for p, data in zip(parameters, network_data["parameters"]):
+            p.data = data
+        return n
