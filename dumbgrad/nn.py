@@ -624,7 +624,8 @@ class Network:
             "NoRegularization": NoRegularization
         }
         regularization_data = network_data["regularization"]
-        reg = regularization_classes[regularization_data["type"]]
+        alpha = regularization_data["alpha"]
+        reg = regularization_classes[regularization_data["type"]](alpha)
 
         layers_data = network_data["layers"]
         layer_classes = {
