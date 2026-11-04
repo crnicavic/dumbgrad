@@ -1,9 +1,8 @@
 from dumbgrad.nn import *
 from dumbgrad.utils import *
+import os
 
 def compare_networks(n1, n2):
-    for p1, p2 in zip(n1.parameters(), n2.parameters()):
-        assert p1.data == p2.data
 
     assert n1.optimizer.omega1 == n2.optimizer.omega1
     assert n1.optimizer.omega2 == n2.optimizer.omega2
@@ -21,6 +20,12 @@ def compare_networks(n1, n2):
         if not isinstance(l1, LSTM):
             assert l1.activation == l2.activation
 
+    n1_parameters = n1.parameters()
+    n2_parameters = n2.parameters()
+    assert len(n1_parameters) == len(n2_parameters)
+    for p1, p2 in zip(n1_parameters, n2_parameters):
+        assert p1.data == p2.data
+
 def test_load_save_sanity():
     n1 = Network([
         Input(5),
@@ -30,33 +35,65 @@ def test_load_save_sanity():
     ])
 
     n1.build(loss="cross_entropy")
-    n1.save("./test_network.json")
-
-    n2 = Network.load("./test_network.json")
+    path = "./test_network.json"
+    n1.save(path)
+    n2 = Network.load(path)
+    os.remove(path)
 
     compare_networks(n1, n2)
 
-def test_load_save_methods():
+def test_load_save_complete():
+
+    class_count = 5
+    input_count = class_count + 1
+    lstm_size = 20
+    output_count = input_count
+
+    sequences = [
+        [
+            [
+                int(i == (j + k) % class_count)
+                for i in range(input_count)
+            ]
+            for j in range(class_count)
+        ]
+        for k in range(class_count)
+    ]
+
+    inputs = sequences
+    end = [int(i == input_count-1) for i in range(input_count)]
+    outputs = [sequence[1:] + [end] for sequence in sequences]
+
     n1 = Network([
-        Input(5),
+        Input(input_count),
         Layer(5, activation="tanh"),
-        LSTM(5),
+        LSTM(lstm_size),
         Layer(5, activation="sigmoid"),
         Layer(5, activation="relu"),
         Layer(5, activation="leaky_relu"),
-        Layer(5, activation="softmax")
+        Layer(output_count, activation="softmax")
     ])
 
     reg = L2Regularization()
     opt = Optimizer(lr=0.01)
     n1.build(seed=0, loss="cross_entropy", optimizer=opt, regularization=reg)
-    n1.save("./test_network.json")
-
-    n2 = Network.load("./test_network.json")
+    path = "./test_network.json"
+    n1.save(path)
+    n2 = Network.load(path)
+    os.remove(path)
 
     compare_networks(n1, n2)
 
+    n1.train(inputs, outputs)
+    n2.train(inputs, outputs)
+
+    n1_parameters = n1.parameters()
+    n2_parameters = n2.parameters()
+    assert len(n1_parameters) == len(n2_parameters)
+    for p1, p2 in zip(n1_parameters, n2_parameters):
+        assert p1.data == p2.data
 
 
 if __name__ == "__main__":
     test_load_save_sanity()
+    test_load_save_complete()

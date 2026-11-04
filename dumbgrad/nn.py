@@ -604,12 +604,14 @@ class Network:
 
         f = open(path, 'w', encoding="utf-8")
         json.dump(network_data, f, indent=4)
+        f.close()
 
 
     @staticmethod
     def load(path):
         f = open(path, 'r', encoding="utf-8")
         network_data = json.load(f)
+        f.close()
         optimizer_data = network_data["optimizer"]
         opt = Optimizer(
             optimizer_data["omega1"],
