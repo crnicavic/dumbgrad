@@ -278,6 +278,7 @@ class Network:
 
         self.layers.pop(0)
 
+    # NOTE: potentially add updates_per_epoch parameter to update parameters more often
     def train(self, inputs, outputs, batch_size=1, epochs=10, n_workers=1, max_time=None):
         """
         Method for training the entire network.

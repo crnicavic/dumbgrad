@@ -8,7 +8,7 @@ def test_xor():
         Layer(2, activation="softmax")
     ])
     opt = Optimizer(lr=0.01)
-    n.build(seed=2000, optimizer=opt)
+    n.build(seed=0, optimizer=opt, loss="sum_of_squares")
 
     x = [
         [0, 0],

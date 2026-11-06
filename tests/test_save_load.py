@@ -34,7 +34,7 @@ def test_load_save_sanity():
         Layer(5)
     ])
 
-    n1.build(loss="cross_entropy")
+    n1.build(seed=0, loss="cross_entropy")
     path = "./test_network.json"
     n1.save(path)
     n2 = Network.load(path)

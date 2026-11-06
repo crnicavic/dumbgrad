@@ -63,13 +63,14 @@ def test_gradients():
         Layer(20),
         Layer(8)
     ])
-    nn.build()
+    nn.build(seed=0, loss="sum_of_squares")
     loss = make_loss(nn)
     numgrads = find_gradients_numeric(loss, nn)
     topo = loss.make_topo()
     loss.backprop(topo)
-    g = draw_dot(loss)
-    g.render(filename="loss", format="png")
+    # comment in only if graphviz installed
+    #g = draw_dot(loss)
+    #g.render(filename="loss", format="png")
     print(len(numgrads), len(topo))
     assert gradient_cmp(numgrads, topo)
 
