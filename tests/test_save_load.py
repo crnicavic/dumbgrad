@@ -93,6 +93,9 @@ def test_load_save_complete():
     for p1, p2 in zip(n1_parameters, n2_parameters):
         assert p1.data == p2.data
 
+    n1.test(inputs, outputs)
+    n2.test(inputs, outputs)
+
 
 if __name__ == "__main__":
     test_load_save_sanity()
