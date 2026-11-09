@@ -57,8 +57,10 @@ def test_encoding_integers():
 
 def test_encoding_sorting():
     test_string = "The quick brown fox jumps over the lazy dog"
-    sorted_labels = encode_labels(test_string, sort=True)
-    unsorted_labels = encode_labels(test_string, sort=False)
+    sorted_mapping = create_mapping(test_string, sort=True)
+    sorted_labels = encode_labels(test_string, mapping=sorted_mapping)
+    unsorted_mapping = create_mapping(test_string, sort=False)
+    unsorted_labels = encode_labels(test_string, mapping=unsorted_mapping)
     # if the sorted string is different than the unsorted one
     # the mappings will be different
     if list(test_string) == sorted(test_string):
