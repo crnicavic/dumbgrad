@@ -134,7 +134,58 @@ def from_categorical(y):
     """
     return [argmax(row) for row in y]
 
-def encode_labels(arr, sort=True, per_character=False):
+def create_mapping(arr, sort=True, per_character=False):
+    """
+    Create a mapping for conversion to network inputs
+    from one format to another. The way this works
+    is that for every element in an array a number
+    is assigned. For example the string "dcba",
+    will create the mapping if sort is set to True:
+    {
+        'a': 0,
+        'b': 1,
+        'c': 2,
+        'd': 3
+    }
+    notice that even 'd' comes before 'a' in the string,
+    it is assigned the lower value because it comes first in
+    ASCII. If this behaviour is not wanted, the sort flag
+    should be False. This assigns the values as they show
+    up. So when d shows up first, it will get 0, and so on:
+    {
+        'd': 0,
+        'c': 1,
+        'b': 2,
+        'a': 3
+    }
+
+    The per character flag should be used mainly when passing
+    an array of strings. If the flag is set to true, then
+    each character is a unique class. If it is false, then
+    each string in it's entirety is a class.
+
+    For the list of strings ["abcd", "dcba"], per_character=True
+    will result in the mapping:
+    {
+        'a': 0,
+        'b': 1,
+        'c': 2,
+        'd': 3
+    }
+    and setting it to False:
+    {
+        "abcd": 0,
+        "dcba": 1
+    }
+    """
+    uniques = unique(arr, per_character)
+    if sort:
+        uniques = sorted(uniques)
+
+    mapping = {k: i for i, k in enumerate(uniques)}
+    return mapping
+
+def encode_labels(arr, per_character=False, mapping=None):
     """
     Convert an array of labels into a one-hot encoded matrix.
 
@@ -155,45 +206,27 @@ def encode_labels(arr, sort=True, per_character=False):
     mapped to an index, and then to_categorical is
     called to one hot encode those indices.
 
-    The sort flag is used to set if the keys should be sorted,
-    or should the keys be indexed as they come.
-
-    The string "dcba" can be converted into:
-    [
-        [0 0 0 1]
-        [0 0 1 0]
-        [0 1 0 0]
-        [1 0 0 0]
-    ]
-    if sort=True
-    OR
-    [
-        [1 0 0 0]
-        [0 1 0 0]
-        [0 0 1 0]
-        [0 0 0 1]
-    ]
-    if sort=False
-
-    The difference here is that the unique values were sorted
-    or not. In other words, for sort=True, 'a' was mapped in
-    the first index, and for sort=False, 'd' was mapped in the
-    first index because it appeared first.
+    The mapping can be left None and the function will
+    do it implicitly, or the user can pass their own
+    mapping. To do that either use the create_mapping
+    function, or create your own.
     """
-    uniques = unique(arr, per_character)
-    if sort:
-        uniques = sorted(uniques)
 
-    num_classes = len(uniques)
     # create a mapping for every character
-    class_keys = {k: i for i, k in enumerate(uniques)}
+    if mapping is None:
+        mapping = create_mapping(arr, True, per_character)
+
+    num_classes = len(mapping)
     # form an array of those indices
     if per_character:
-       return [to_categorical([class_keys[char] for char in s], num_classes) for s in arr]
+        # create categorical for each character
+        return [
+           to_categorical([mapping[char] for char in s], num_classes)
+           for s in arr
+        ]
     else:
-        encoding = [class_keys[a] for a in arr]
-        return to_categorical(encoding)
-
+        encoding = [mapping[a] for a in arr]
+        return to_categorical(encoding, num_classes)
 
 def make_batches(inputs, outputs, batch_size):
     """

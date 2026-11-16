@@ -68,12 +68,12 @@ def test_lstm_fixed_len_pangrams():
     n = Network([
         Input(input_count),
         LSTM(lstm_size),
-        Layer(output_count)
+        Layer(output_count, activation="softmax")
     ])
-    opt = Optimizer(lr=0.01)
-    n.build(seed=0, optimizer=opt)
-    n.train(inputs, outputs, epochs=50, n_workers=4)
-    n.test(inputs, outputs)
+    opt = Optimizer(lr=0.1)
+    n.build(seed=0, optimizer=opt, loss="cross_entropy")
+    n.train(inputs, outputs, epochs=20, n_workers=4)
+    assert n.test(inputs, outputs) > 0.75
 
 def test_lstm_variable_len_pangrams():
     # the mappings have to be consistent between inputs and outputs
@@ -90,12 +90,12 @@ def test_lstm_variable_len_pangrams():
     n = Network([
         Input(input_count),
         LSTM(lstm_size),
-        Layer(output_count)
+        Layer(output_count, activation="softmax")
     ])
-    opt = Optimizer(lr=0.01)
-    n.build(seed=0, optimizer=opt)
-    n.train(inputs, outputs, epochs=50, n_workers=4)
-    n.test(inputs, outputs)
+    opt = Optimizer(lr=0.1)
+    n.build(seed=0, optimizer=opt, loss="cross_entropy")
+    n.train(inputs, outputs, epochs=20, n_workers=4)
+    assert n.test(inputs, outputs) > 0.75
 
 
 if __name__ == "__main__":

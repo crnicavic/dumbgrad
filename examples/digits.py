@@ -3,6 +3,7 @@ from dumbgrad.nn import *
 from dumbgrad.utils import *
 from sklearn.model_selection import train_test_split
 from sklearn.datasets import load_digits
+import os
 
 if __name__ == "__main__":
     dataset = load_digits()
@@ -21,5 +22,11 @@ if __name__ == "__main__":
     reg = L2Regularization()
     optimizer = Optimizer(lr=0.01)
     n.build(seed=0, loss="cross_entropy", regularization=reg, optimizer=optimizer)
-    n.train(x_train, y_train, batch_size=419, epochs=15, n_workers=2)
+    n.train(x_train, y_train, batch_size=419, epochs=20, n_workers=2)
     n.test(x_test, y_test, n_workers=1)
+
+    dest_dir = "./examples/nets/"
+    if not os.path.exists(dest_dir):
+        os.mkdir(dest_dir)
+    dest_path = dest_dir + "digits.json"
+    n.save(dest_path)

@@ -31,7 +31,7 @@ def test_topo_nn_sanity():
         Layer(5, activation="softmax")
     ])
 
-    nn.build(seed=2000)
+    nn.build(seed=0, loss="sum_of_squares")
 
     x = [[0 for _i in range(input_size)] for _j in range(2**input_size)]
     for i in range(2**input_size):
@@ -71,7 +71,7 @@ def test_topo_nn_regression():
         Layer(5, activation="softmax")
     ])
 
-    nn.build(seed=2000)
+    nn.build(seed=0, loss="sum_of_squares")
 
     x = [[0 for _i in range(input_size)] for _j in range(2**input_size)]
     for i in range(2**input_size):
@@ -118,7 +118,7 @@ def test_topo_nn_regression_sparse():
         Layer(5, activation="softmax")
     ])
 
-    nn.build(seed=2000)
+    nn.build(seed=0, loss="sum_of_squares")
 
     x = [[0 for _i in range(input_size)] for _j in range(2**input_size)]
     for i in range(2**input_size):
