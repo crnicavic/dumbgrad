@@ -6,29 +6,6 @@ import time
 import multiprocessing as mp
 import json
 
-def sum_of_squares(_y, _y_pred):
-    y = flat_iter(_y)
-    y_pred = flat_iter(_y_pred)
-    diffs = [(y1 - y2)**2 for y1, y2 in zip(y, y_pred)]
-
-    return value_sum(diffs)
-
-def cross_entropy(_y, _y_pred):
-    y = flat_iter(_y)
-    y_pred = flat_iter(_y_pred)
-    ent = []
-    for y1, y2 in zip(y, y_pred):
-        if y1 == 0:
-            continue
-        ent.append(-1 * y1 * y2.log())
-
-    return value_sum(ent)
-
-def make_weight_lambda(limit, rng=None):
-    # generation function
-    rand = random.uniform if rng is None else rng.uniform
-    # create a lambda as sort of a macro to make weights
-    return lambda: Parameter(rand(-limit, limit), label='w')
 
 class Parameter(Value):
     __slots__ = ('m', 'v')
@@ -37,43 +14,16 @@ class Parameter(Value):
         self.m = 0
         self.v = 0
 
-class Optimizer:
-    def __init__(self, omega1=0.9, omega2=0.99, lr=0.001, eps=1e-6):
-        self.omega1 = omega1
-        self.omega2 = omega2
-        self.lr = lr
-        self.eps = eps
+# just a placeholder for prettier formating
+class Input:
+    def __init__(self, size):
+        self.size = size
 
-    def __call__(self, p, t):
-        p.m = self.omega1 * p.m + (1 - self.omega1) * p.grad
-        p.v = self.omega2 * p.v + (1 - self.omega2) * p.grad**2
-
-        m_hat = p.m / (1 - self.omega1 ** t)
-        v_hat = p.v / (1 - self.omega2 ** t)
-
-        p.data = p.data - self.lr * m_hat / (math.sqrt(v_hat) + self.eps)
-
-class Regularization():
-    def __init__(self, alpha=0.01):
-        self.alpha = alpha
-
-class L1Regularization(Regularization):
-    def __call__(self, weights):
-        total = weights[0].abs()
-        for w in weights[1:]:
-            total += w.abs()
-        return total * self.alpha
-
-class L2Regularization(Regularization):
-    def __call__(self, weights):
-        total = weights[0] ** 2
-        for w in weights[1:]:
-            total += w ** 2
-        return total * self.alpha
-
-class NoRegularization(Regularization):
-    def __call__(self, weights):
-        return 0
+def make_weight_lambda(limit, rng=None):
+    # generation function
+    rand = random.uniform if rng is None else rng.uniform
+    # create a lambda as sort of a macro to make weights
+    return lambda: Parameter(rand(-limit, limit), label='w')
 
 class Neuron:
     def __init__(self, input_count, output_count, rng=None, activation="tanh"):
@@ -130,11 +80,6 @@ class Layer:
 
     def build(self, input_count, rng=None):
         self.neurons = [Neuron(input_count, self.size, rng, self.activation) for _ in range(self.size)]
-
-# just a placeholder for prettier formating
-class Input:
-    def __init__(self, size):
-        self.size = size
 
 class LSTM:
     def __init__(self, size):
@@ -212,6 +157,62 @@ class LSTM:
 
     def parameters(self):
         return self.weights() + self.b_f + self.b_i + self.b_c + self.b_o
+
+def sum_of_squares(_y, _y_pred):
+    y = flat_iter(_y)
+    y_pred = flat_iter(_y_pred)
+    diffs = [(y1 - y2)**2 for y1, y2 in zip(y, y_pred)]
+
+    return value_sum(diffs)
+
+def cross_entropy(_y, _y_pred):
+    y = flat_iter(_y)
+    y_pred = flat_iter(_y_pred)
+    ent = []
+    for y1, y2 in zip(y, y_pred):
+        if y1 == 0:
+            continue
+        ent.append(-1 * y1 * y2.log())
+
+    return value_sum(ent)
+
+class Regularization():
+    def __init__(self, alpha=0.01):
+        self.alpha = alpha
+
+class L1Regularization(Regularization):
+    def __call__(self, weights):
+        total = weights[0].abs()
+        for w in weights[1:]:
+            total += w.abs()
+        return total * self.alpha
+
+class L2Regularization(Regularization):
+    def __call__(self, weights):
+        total = weights[0] ** 2
+        for w in weights[1:]:
+            total += w ** 2
+        return total * self.alpha
+
+class NoRegularization(Regularization):
+    def __call__(self, weights):
+        return 0
+
+class Optimizer:
+    def __init__(self, omega1=0.9, omega2=0.99, lr=0.001, eps=1e-6):
+        self.omega1 = omega1
+        self.omega2 = omega2
+        self.lr = lr
+        self.eps = eps
+
+    def __call__(self, p, t):
+        p.m = self.omega1 * p.m + (1 - self.omega1) * p.grad
+        p.v = self.omega2 * p.v + (1 - self.omega2) * p.grad**2
+
+        m_hat = p.m / (1 - self.omega1 ** t)
+        v_hat = p.v / (1 - self.omega2 ** t)
+
+        p.data = p.data - self.lr * m_hat / (math.sqrt(v_hat) + self.eps)
 
 class Network:
     def __init__(self, layers):
