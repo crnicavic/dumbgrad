@@ -196,7 +196,7 @@ class L2Regularization(Regularization):
 
 class NoRegularization(Regularization):
     def __call__(self, weights):
-        return 0
+        return Value(0)
 
 class Optimizer:
     def __init__(self, omega1=0.9, omega2=0.99, lr=0.001, eps=1e-6):

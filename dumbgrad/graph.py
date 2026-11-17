@@ -2,6 +2,7 @@ from graphviz import Digraph
 
 def trace(root):
     nodes = root.make_topo()
+    # create a set
     edges = {(child, node) for node in nodes for child in node.children}
     return nodes, edges
 
