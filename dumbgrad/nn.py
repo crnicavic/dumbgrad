@@ -350,6 +350,7 @@ class Network:
         # if an LSTM network is trained, dont batch
         if not self.is_recurrent:
             inputs, outputs = make_batches(inputs, outputs, batch_size)
+        total_len = sum([len(o) for o in outputs])
 
         # don't create more processes than batches
         n_workers = min(n_workers, len(inputs))
@@ -397,7 +398,7 @@ class Network:
             print(f"loss in epoch {t}: {sum(losses)}")
             # apply averaged gradients
             for p, g in zip(params, list(zip(*grads))):
-                p.grad = sum(g)/len(inputs)
+                p.grad = sum(g)/total_len
 
             for p in params:
                 self.optimizer(p, t)
@@ -409,7 +410,6 @@ class Network:
             p.join()
 
         training_time = time.perf_counter() - start_time
-        total_len = sum([len(o) for o in outputs])
         print(f"training time on {total_len} samples with {n_workers} workers: {training_time}s")
 
     def training_worker(self, inputs, outputs, input_queue, output_queue):
